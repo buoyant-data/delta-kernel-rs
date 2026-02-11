@@ -6,7 +6,7 @@ use crate::action_reconciliation::{
 use crate::actions::{Add, Metadata, Protocol, Remove};
 use crate::arrow::datatypes::DataType;
 use crate::arrow::{
-    array::{create_array, RecordBatch},
+    array::{create_array, ArrayRef, RecordBatch, StructArray},
     datatypes::{Field, Schema},
 };
 use crate::checkpoint::{create_last_checkpoint_data, CHECKPOINT_ACTIONS_SCHEMA_V2};
@@ -49,6 +49,8 @@ fn test_deleted_file_retention_timestamp(
 
 #[tokio::test]
 async fn test_create_checkpoint_metadata_batch() -> DeltaResult<()> {
+    use crate::checkpoint::CHECKPOINT_ACTIONS_SCHEMA_V2;
+
     let (store, _) = new_in_memory_store();
     let engine = DefaultEngineBuilder::new(store.clone()).build();
 
@@ -79,6 +81,22 @@ async fn test_create_checkpoint_metadata_batch() -> DeltaResult<()> {
     let record_batch = arrow_engine_data.record_batch();
 
     // Verify the schema has the expected fields
+    // Build the expected RecordBatch
+    // Note: The schema is a struct with a single field "checkpointMetadata" of type struct
+    // containing a single field "version" of type long
+    let expected_schema = Arc::new(Schema::new(vec![Field::new(
+        "checkpointMetadata",
+        DataType::Struct(vec![Field::new("version", DataType::Int64, false)].into()),
+        true,
+    )]));
+    let expected = RecordBatch::try_new(
+        expected_schema,
+        vec![Arc::new(StructArray::from(vec![(
+            Arc::new(Field::new("version", DataType::Int64, false)),
+            create_array!(Int64, [0]) as ArrayRef,
+        )]))],
+    )
+    .unwrap();
     let schema = record_batch.schema();
     assert!(
         schema.field_with_name("checkpointMetadata").is_ok(),
@@ -899,6 +917,48 @@ async fn test_stats_config_round_trip(
     for batch in result2 {
         let _ = batch?;
     }
+    Ok(())
+}
+
+/// Tests that writing a V2 checkpoint to parquet succeeds.
+///
+/// V2 checkpoints include a checkpointMetadata batch in addition to the regular action
+/// batches. All batches in a parquet file must share the same schema. This test verifies
+/// that `snapshot.checkpoint()` can write a V2 checkpoint without schema mismatch errors.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_v2_checkpoint_parquet_write() -> DeltaResult<()> {
+    let (store, _) = new_in_memory_store();
+    let executor = Arc::new(TokioMultiThreadExecutor::new(
+        tokio::runtime::Handle::current(),
+    ));
+    let engine = DefaultEngineBuilder::new(store.clone())
+        .with_task_executor(executor)
+        .build();
+
+    // Protocol with v2Checkpoint feature
+    write_commit_to_store(
+        &store,
+        vec![
+            create_v2_checkpoint_protocol_action(),
+            create_metadata_action(),
+        ],
+        0,
+    )
+    .await?;
+
+    // Add a file so the checkpoint has action batches + metadata batch
+    write_commit_to_store(&store, vec![create_add_action("file1.parquet")], 1).await?;
+
+    let table_root = Url::parse("memory:///")?;
+    let snapshot = Snapshot::builder_for(table_root.clone()).build(&engine)?;
+
+    // This writes to parquet — will fail if the checkpointMetadata batch has a different
+    // schema than the action batches.
+    snapshot.checkpoint(&engine)?;
+
+    // Verify the checkpoint was written and is readable
+    let snapshot2 = Snapshot::builder_for(table_root).build(&engine)?;
+    assert_eq!(snapshot2.version(), 1);
 
     Ok(())
 }

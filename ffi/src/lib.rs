@@ -1280,9 +1280,9 @@ mod tests {
     use delta_kernel::engine::default::DefaultEngineBuilder;
     use delta_kernel::object_store::memory::InMemory;
     use delta_kernel::object_store::path::Path;
-    use delta_kernel::object_store::ObjectStore;
     use delta_kernel::schema::StructType;
     use rstest::rstest;
+    use delta_kernel::object_store::ObjectStoreExt as _;
     use serde_json::Value;
     use std::collections::HashMap;
     use test_utils::add_staged_commit;

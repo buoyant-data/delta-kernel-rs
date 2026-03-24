@@ -519,7 +519,6 @@ impl StructField {
                 // the Delta protocol requirement and Delta Spark behaviour).
                 let Some(MetadataValue::Number(fid)) = field_id else {
                     warn!("StructField with name {} is missing field id in the Name column mapping mode", self.name());
-                    debug_assert!(false);
                     return base_metadata;
                 };
                 base_metadata.insert(

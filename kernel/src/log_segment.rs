@@ -22,7 +22,7 @@ use crate::{
 use delta_kernel_derive::internal_api;
 
 #[internal_api]
-use crate::listed_log_files::ListedLogFiles;
+use crate::listed_log_files::{ListedLogFiles, ListedLogFilesBuilder};
 use crate::schema::compare::SchemaComparison;
 
 use itertools::Itertools;

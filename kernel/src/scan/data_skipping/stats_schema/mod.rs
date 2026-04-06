@@ -118,20 +118,33 @@ pub(crate) fn expected_stats_schema(
     let mut base_transform = BaseStatsTransform::new(table_properties, clustering_columns);
     if let Some(base_schema) = base_transform.transform_struct(logical_data_schema) {
         let base_schema = base_schema.into_owned();
+        dbg!(&base_schema);
 
         // convert all leaf fields to data type LONG for null count
         let mut null_count_transform = NullCountStatsTransform;
         if let Some(null_count_schema) = null_count_transform.transform_struct(&base_schema) {
+            let null_count_schema = StructType::try_new(null_count_schema.fields().map(|f| {
+                // Prune any present metadata  on the [StructField] for the null count schema to
+                // avoid mismatches between what might be in a parquet/checkpoint file compared to
+                // what is defined as the schema on the table configuration itself
+                StructField::new(f.name(), f.data_type().clone(), f.nullable)
+            }))?;
             fields.push(StructField::nullable(
                 "nullCount",
-                null_count_schema.into_owned(),
+                null_count_schema,
             ));
         };
 
         // include only min/max skipping eligible fields (data types)
         let mut min_max_transform = MinMaxStatsTransform;
         if let Some(min_max_schema) = min_max_transform.transform_struct(&base_schema) {
-            let min_max_schema = min_max_schema.into_owned();
+            let min_max_schema = StructType::try_new(min_max_schema.fields().map(|f| {
+                // Prune any present metadata  on the [StructField] for the minValues and maxValues
+                // schemas to avoid mismatches between what might be in a parquet/checkpoint file
+                // compared to what is defined as the schema on the table configuration itself
+                StructField::new(f.name(), f.data_type().clone(), f.nullable)
+            }))?;
+
             fields.push(StructField::nullable("minValues", min_max_schema.clone()));
             fields.push(StructField::nullable("maxValues", min_max_schema));
         }

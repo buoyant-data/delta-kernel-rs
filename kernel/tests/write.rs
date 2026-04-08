@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use buoyant_kernel as delta_kernel;
+
 use delta_kernel::committer::FileSystemCommitter;
 use delta_kernel::Error as KernelError;
 use delta_kernel::{DeltaResult, Engine, Snapshot, Version};

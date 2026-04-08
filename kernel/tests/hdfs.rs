@@ -7,6 +7,8 @@
 //   cargo test --features integration-test --test hdfs
 #![cfg(all(feature = "integration-test", not(target_os = "windows")))]
 
+use buoyant_kernel as delta_kernel;
+
 use delta_kernel::Snapshot;
 use hdfs_native::{Client, WriteOptions};
 use hdfs_native_object_store::minidfs::MiniDfs;

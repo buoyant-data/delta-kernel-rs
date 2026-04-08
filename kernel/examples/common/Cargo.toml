@@ -18,7 +18,7 @@ arrow-57 = ["delta_kernel/arrow-57"]
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
-delta_kernel = { path = "../../../kernel", features = [
+delta_kernel = { package = "buoyant_kernel", path = "../../../kernel", features = [
   "default-engine-rustls",
   "internal-api",
 ] }

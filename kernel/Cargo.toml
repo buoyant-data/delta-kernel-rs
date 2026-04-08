@@ -1,7 +1,7 @@
 [package]
-name = "delta_kernel"
-description = "Core crate providing a Delta/Deltalake implementation focused on interoperability with a wide range of query engines."
-documentation = "https://docs.rs/delta_kernel"
+name = "buoyant_kernel"
+description = "Buoyant Data distribution of delta-kernel"
+documentation = "https://docs.rs/buoyant_kernel"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
@@ -39,7 +39,7 @@ pre-release-hook = [
 ]
 
 [dependencies]
-delta_kernel_derive = { path = "../derive-macros", version = "0.20.0" }
+delta_kernel_derive = { package = "buoyant_kernel_derive", path = "../derive-macros", version = "1"}
 bytes = "1.10"
 chrono = "0.4.41"
 crc = "3.2.2"
@@ -134,9 +134,9 @@ default-engine-rustls = ["default-engine-base", "reqwest/rustls"]
 rustc_version = "0.4.1"
 
 [dev-dependencies]
-delta_kernel = { path = ".", features = ["test-utils"] }
-# NOTE: test_utils forcibly pulls the default engine and arrow-57. By default it ALSO pulls
-# arrow-58, which takes precedence and would make it impossible to test against arrow-57.
+delta_kernel = { package = "buoyant_kernel", path = ".", features = ["test-utils", "arrow"] }
+# NOTE: test_utils forcibly pulls the default engine and arrow-56. By default it ALSO pulls
+# arrow-57, which takes precedence and would make it impossible to test against arrow-56.
 test_utils = { path = "../test-utils", default-features = false }
 criterion = "0.5"
 # Used for testing parse_url_opts extensibility

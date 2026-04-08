@@ -5,6 +5,8 @@ use std::ops::Add;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use buoyant_kernel as delta_kernel;
+
 use delta_kernel::actions::deletion_vector_writer::{
     KernelDeletionVector, StreamingDeletionVectorWriter,
 };

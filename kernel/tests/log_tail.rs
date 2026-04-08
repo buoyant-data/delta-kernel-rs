@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use url::Url;
 
+use buoyant_kernel as delta_kernel;
+
 use delta_kernel::engine::default::executor::tokio::TokioBackgroundExecutor;
 use delta_kernel::engine::default::{DefaultEngine, DefaultEngineBuilder};
 use delta_kernel::object_store::memory::InMemory;

@@ -6,6 +6,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use buoyant_kernel as delta_kernel;
+
 use delta_kernel::arrow::array::{Array, AsArray, StructArray};
 use delta_kernel::arrow::compute::{concat_batches, take};
 use delta_kernel::arrow::compute::{lexsort_to_indices, SortColumn};

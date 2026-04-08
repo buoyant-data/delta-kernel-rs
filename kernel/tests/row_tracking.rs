@@ -6,6 +6,8 @@ use serde_json::{Deserializer, Value};
 use tempfile::{tempdir, TempDir};
 use url::Url;
 
+use buoyant_kernel as delta_kernel;
+
 use delta_kernel::arrow::array::{Array, Int32Array, Int64Array, StringArray};
 use delta_kernel::arrow::datatypes::Schema as ArrowSchema;
 use delta_kernel::arrow::record_batch::RecordBatch;

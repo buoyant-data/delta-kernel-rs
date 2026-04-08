@@ -417,7 +417,11 @@ mod tests {
             }
 
             // Do the actual GET request first, then introduce any artificial ordering delays as needed
-            let result = self.inner.get_opts(location, options).await;
+            let result = self.inner.get_opts(location, options.clone()).await;
+
+            if options.head {
+                return result;
+            }
 
             // we implement a future which only resolves once the requested path is next in order
             future::poll_fn(move |cx| {

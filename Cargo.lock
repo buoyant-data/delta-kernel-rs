@@ -4,10 +4,10 @@ version = 4
 
 [[package]]
 name = "acceptance"
-version = "0.20.0"
+version = "0.20.100"
 dependencies = [
+ "buoyant_kernel",
  "datatest-stable",
- "delta_kernel",
  "delta_kernel_benchmarks",
  "flate2",
  "futures",
@@ -770,6 +770,57 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d20789868f4b01b2f2caec9f5c4e0213b41e3e5702a50157d699ae31ced2fcb"
 
 [[package]]
+name = "buoyant_kernel"
+version = "0.20.100"
+dependencies = [
+ "arrow 56.2.0",
+ "arrow 57.3.0",
+ "async-trait",
+ "buoyant_kernel",
+ "buoyant_kernel_derive",
+ "bytes",
+ "chrono",
+ "crc",
+ "criterion",
+ "futures",
+ "hdfs-native",
+ "hdfs-native-object-store",
+ "indexmap",
+ "itertools 0.14.0",
+ "object_store",
+ "parquet 56.2.0",
+ "parquet 57.3.0",
+ "paste",
+ "reqwest 0.13.2",
+ "roaring",
+ "rstest",
+ "rustc_version",
+ "serde",
+ "serde_json",
+ "strum 0.27.2",
+ "tempfile",
+ "test-log",
+ "test_utils",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+ "walkdir",
+ "z85",
+]
+
+[[package]]
+name = "buoyant_kernel_derive"
+version = "1.0.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "bytemuck"
 version = "1.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -872,11 +923,11 @@ dependencies = [
 name = "checkpoint-table"
 version = "0.1.0"
 dependencies = [
+ "buoyant_kernel",
  "bytes",
  "chrono",
  "clap",
  "common",
- "delta_kernel",
  "env_logger",
  "futures",
  "tokio",
@@ -1022,10 +1073,10 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "0.20.0"
+version = "0.20.100"
 dependencies = [
+ "buoyant_kernel",
  "clap",
- "delta_kernel",
  "url",
 ]
 
@@ -1238,9 +1289,9 @@ dependencies = [
 
 [[package]]
 name = "delta-kernel-unity-catalog"
-version = "0.20.0"
+version = "0.20.100"
 dependencies = [
- "delta_kernel",
+ "buoyant_kernel",
  "itertools 0.14.0",
  "serde",
  "serde_json",
@@ -1254,54 +1305,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "delta_kernel"
-version = "0.20.0"
-dependencies = [
- "arrow 56.2.0",
- "arrow 57.3.0",
- "async-trait",
- "bytes",
- "chrono",
- "crc",
- "criterion",
- "delta_kernel",
- "delta_kernel_derive",
- "futures",
- "hdfs-native",
- "hdfs-native-object-store",
- "indexmap",
- "itertools 0.14.0",
- "object_store",
- "parquet 56.2.0",
- "parquet 57.3.0",
- "paste",
- "reqwest 0.13.2",
- "roaring",
- "rstest",
- "rustc_version",
- "serde",
- "serde_json",
- "strum 0.27.2",
- "tempfile",
- "test-log",
- "test_utils",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "url",
- "uuid",
- "walkdir",
- "z85",
-]
-
-[[package]]
 name = "delta_kernel_benchmarks"
-version = "0.20.0"
+version = "0.20.100"
 dependencies = [
+ "buoyant_kernel",
  "criterion",
  "delta-kernel-unity-catalog",
- "delta_kernel",
  "flate2",
  "object_store",
  "rayon",
@@ -1319,21 +1328,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "delta_kernel_derive"
-version = "0.20.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "delta_kernel_ffi"
-version = "0.20.0"
+version = "0.20.100"
 dependencies = [
+ "buoyant_kernel",
  "cbindgen",
  "delta-kernel-unity-catalog",
- "delta_kernel",
  "delta_kernel_ffi_macros",
  "itertools 0.14.0",
  "libc",
@@ -1355,7 +1355,7 @@ dependencies = [
 
 [[package]]
 name = "delta_kernel_ffi_macros"
-version = "0.20.0"
+version = "0.20.100"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1506,9 +1506,9 @@ checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
 name = "feature_tests"
-version = "0.20.0"
+version = "0.20.100"
 dependencies = [
- "delta_kernel",
+ "buoyant_kernel",
  "reqwest 0.13.2",
  "rustls",
 ]
@@ -2192,10 +2192,10 @@ dependencies = [
 name = "inspect-table"
 version = "0.1.0"
 dependencies = [
+ "buoyant_kernel",
  "chrono",
  "clap",
  "common",
- "delta_kernel",
  "env_logger",
 ]
 
@@ -2515,9 +2515,9 @@ dependencies = [
 
 [[package]]
 name = "mem-test"
-version = "0.20.0"
+version = "0.20.100"
 dependencies = [
- "delta_kernel",
+ "buoyant_kernel",
  "dhat",
  "rayon",
  "serde_json",
@@ -3221,9 +3221,9 @@ dependencies = [
 name = "read-table-changes"
 version = "0.1.0"
 dependencies = [
+ "buoyant_kernel",
  "clap",
  "common",
- "delta_kernel",
  "itertools 0.14.0",
 ]
 
@@ -3231,9 +3231,9 @@ dependencies = [
 name = "read-table-multi-threaded"
 version = "0.1.0"
 dependencies = [
+ "buoyant_kernel",
  "clap",
  "common",
- "delta_kernel",
  "env_logger",
  "spmc",
  "url",
@@ -3243,9 +3243,9 @@ dependencies = [
 name = "read-table-single-threaded"
 version = "0.1.0"
 dependencies = [
+ "buoyant_kernel",
  "clap",
  "common",
- "delta_kernel",
  "env_logger",
  "itertools 0.14.0",
 ]
@@ -4037,9 +4037,9 @@ dependencies = [
 
 [[package]]
 name = "test_utils"
-version = "0.20.0"
+version = "0.20.100"
 dependencies = [
- "delta_kernel",
+ "buoyant_kernel",
  "itertools 0.14.0",
  "serde_json",
  "tar",
@@ -4471,7 +4471,7 @@ checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 
 [[package]]
 name = "unity-catalog-delta-client-api"
-version = "0.20.0"
+version = "0.20.100"
 dependencies = [
  "chrono",
  "serde",
@@ -4482,7 +4482,7 @@ dependencies = [
 
 [[package]]
 name = "unity-catalog-delta-rest-client"
-version = "0.20.0"
+version = "0.20.100"
 dependencies = [
  "chrono",
  "clap",
@@ -5223,10 +5223,10 @@ dependencies = [
 name = "write-table"
 version = "0.1.0"
 dependencies = [
+ "buoyant_kernel",
  "chrono",
  "clap",
  "common",
- "delta_kernel",
  "env_logger",
  "itertools 0.14.0",
  "serde_json",

@@ -21,7 +21,7 @@ arrow-57 = ["delta_kernel/arrow-57", "test_utils/arrow-57"]
 arrow-56 = ["delta_kernel/arrow-56", "test_utils/arrow-56"]
 
 [dependencies]
-delta_kernel = { path = "../kernel", features = [
+delta_kernel = { package = "buoyant_kernel", path = "../kernel", features = [
   "default-engine-rustls",
   "internal-api",
   "prettyprint",

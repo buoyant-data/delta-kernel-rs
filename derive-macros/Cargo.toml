@@ -1,13 +1,14 @@
 [package]
-name = "delta_kernel_derive"
-description = "Derive macros for delta_kernel"
+name = "buoyant_kernel_derive"
+description = "Derive macros for buoyant_kernel"
 edition.workspace = true
 homepage.workspace = true
 keywords.workspace = true
 license.workspace = true
 repository.workspace = true
 readme.workspace = true
-version.workspace = true
+# This dependency doesn't move frequently enough to justify minor version bumps
+version = "1.0.0"
 rust-version.workspace = true
 
 [lib]

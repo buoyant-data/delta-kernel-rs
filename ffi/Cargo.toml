@@ -22,7 +22,7 @@ tracing = "0.1"
 tracing-core = { version = "0.1", optional = true }
 tracing-subscriber = { version = "0.3", optional = true, features = [ "json" ] }
 url = "2"
-delta_kernel = { path = "../kernel", default-features = false, features = [
+delta_kernel = { package = "buoyant_kernel", path = "../kernel", default-features = false, features = [
   "internal-api",
 ] }
 delta_kernel_ffi_macros = { path = "../ffi-proc-macros", version = "0.20.0" }

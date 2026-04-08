@@ -13,7 +13,7 @@ version.workspace = true
 release = false
 
 [dependencies]
-delta_kernel = { path = "../kernel" }
+delta_kernel = { package = "buoyant_kernel", path = "../kernel" }
 # Direct deps for TLS crypto provider regression tests (see lib.rs).
 reqwest = { version = "0.13", default-features = false, optional = true }
 rustls = { version = "0.23", default-features = false, optional = true }

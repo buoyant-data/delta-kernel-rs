@@ -11,7 +11,10 @@ pipeline {
     buildDiscarder(logRotator(daysToKeepStr: '90'))
     disableConcurrentBuilds()
     timestamps()
+    // This should help with flakey tests, like concurrency_local
+    retry(1)
   }
+
   stages {
     stage('Rust') {
       failFast true
@@ -19,30 +22,28 @@ pipeline {
       parallel {
         stage('Lint') {
           agent { label 'rust' }
-
-          steps {
-            sh 'cargo clippy'
-          }
+          steps { sh 'cargo clippy' }
         }
 
         stage('Build') {
           agent { label 'rust' }
+          steps { sh 'cargo build' }
+        }
+
+        stage('Arrow 57') {
+          agent { label 'rust' }
 
           steps {
-            sh 'cargo build'
+            sh 'cargo nextest r --features arrow-57'
+            sh 'cargo test --doc'
           }
         }
 
-        stage('Test') {
+        stage('Arrow 58') {
           agent { label 'rust' }
 
-          options {
-            // This should help with flakey tests, like concurrency_local
-            retry(1)
-          }
-
           steps {
-            sh 'cargo nextest r'
+            sh 'cargo nextest r --features arrow-58'
             // It seems that cargo-nextest is not able to run doctests
             // <https://github.com/nextest-rs/nextest/issues/16>
             sh 'cargo test --doc'

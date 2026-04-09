@@ -875,6 +875,7 @@ impl Scan {
     ///
     /// ```no_run
     /// # use std::sync::Arc;
+    /// # use buoyant_kernel as delta_kernel;
     /// # use delta_kernel::{Engine, DeltaResult};
     /// # use delta_kernel::scan::{AfterSequentialScanMetadata, ParallelScanMetadata};
     /// # use delta_kernel::Snapshot;

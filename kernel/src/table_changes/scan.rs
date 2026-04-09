@@ -43,6 +43,7 @@ pub struct TableChangesScan {
 /// Construct a [`TableChangesScan`] from `table_changes` with a given schema and predicate
 /// ```rust
 /// # use std::sync::Arc;
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::expressions::{column_expr, Scalar};
 /// # use delta_kernel::Predicate;
 /// # use delta_kernel::table_changes::TableChanges;

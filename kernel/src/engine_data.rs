@@ -468,6 +468,7 @@ pub trait RowVisitor {
 /// work is in the [`EngineData::visit_rows`] method. See the docs for that method for more details.
 /// ```rust
 /// # use std::any::Any;
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::DeltaResult;
 /// # use delta_kernel::engine_data::{RowVisitor, EngineData, GetData};
 /// # use delta_kernel::expressions::{ArrayData, ColumnName};

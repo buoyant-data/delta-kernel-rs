@@ -42,7 +42,10 @@ pipeline {
           }
 
           steps {
-            sh 'cargo test'
+            sh 'cargo nextest r'
+            // It seems that cargo-nextest is not able to run doctests
+            // <https://github.com/nextest-rs/nextest/issues/16>
+            sh 'cargo test --doc'
           }
         }
       }

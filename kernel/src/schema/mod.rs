@@ -749,8 +749,8 @@ impl StructType {
         self.walk_column_fields_by(col, |s, name| s.field(name))
     }
 
-    /// Helper to walk through nested columns. For each path component in `col`, calls                                                                                                                                                   
-    /// `find_field(current_struct, component)` to locate the matching field, then descends                                                                                                                                              
+    /// Helper to walk through nested columns. For each path component in `col`, calls
+    /// `find_field(current_struct, component)` to locate the matching field, then descends
     /// into the next nested struct. Returns references to all [`StructField`]s along the path.
     pub(crate) fn walk_column_fields_by<'a, F>(
         &'a self,
@@ -1132,6 +1132,7 @@ impl<'a> IntoIterator for &'a StructType {
 /// # Examples
 ///
 /// ```
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::Error;
 /// use delta_kernel::schema::{StructType, StructField, DataType};
 ///
@@ -1205,6 +1206,7 @@ impl DoubleEndedIterator for StructFieldIntoIter {
 /// # Examples
 ///
 /// ```
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::Error;
 /// use delta_kernel::schema::{StructType, StructField, DataType};
 ///

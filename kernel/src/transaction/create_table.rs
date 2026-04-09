@@ -7,6 +7,7 @@
 //! # Example
 //!
 //! ```rust,no_run
+//! # use buoyant_kernel as delta_kernel;
 //! use delta_kernel::transaction::create_table::create_table;
 //! use delta_kernel::schema::{StructType, StructField, DataType};
 //! use delta_kernel::committer::FileSystemCommitter;
@@ -64,6 +65,7 @@ pub use super::builder::create_table::CreateTableTransactionBuilder;
 /// # Example
 ///
 /// ```rust,no_run
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::transaction::create_table::create_table;
 /// use delta_kernel::schema::{StructType, StructField, DataType};
 /// use delta_kernel::committer::FileSystemCommitter;
@@ -98,6 +100,7 @@ pub type CreateTableTransaction = Transaction<CreateTable>;
 ///
 /// ```no_run
 /// use std::sync::Arc;
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::transaction::create_table::create_table;
 /// use delta_kernel::schema::{DataType, StructField, StructType};
 /// use delta_kernel::committer::FileSystemCommitter;

@@ -4037,6 +4037,7 @@ version = "0.21.101"
 dependencies = [
  "buoyant_kernel",
  "itertools 0.14.0",
+ "rstest",
  "serde_json",
  "tar",
  "tempfile",

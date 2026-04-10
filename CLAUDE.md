@@ -8,7 +8,7 @@ internals. Kernel never does I/O directly -- it defines _what_ to do via its API
 (`Snapshot`, `Scan`, `Transaction`) and delegates _how_ to the `Engine` trait.
 
 Current capabilities: table reads with predicates, data skipping, deletion vectors, change
-data feed, checkpoints (V1 & V2), log compaction, blind append writes, table creation
+data feed, checkpoints (V1 & V2), log compaction (disabled, #2337), blind append writes, table creation
 (including clustered tables), and catalog-managed table support.
 
 ## Build & Test Commands
@@ -114,6 +114,12 @@ directly -- always use the visitor pattern (`visit_rows` with typed `GetData` ac
   or inputs. Prefer `#[case]` over duplicating test functions. When parameters are
   independent and form a cartesian product, prefer `#[values]` over enumerating
   every combination with `#[case]`.
+- Actively look for rstest consolidation opportunities: when writing multiple tests
+  that share the same setup/flow and differ only in configuration and expected
+  outcome, write one parameterized rstest instead of separate functions. Also check
+  whether a new test duplicates the flow of an existing nearby test and should be
+  merged into it as a new `#[case]`. A common pattern is toggling a feature (e.g.
+  column mapping on/off) and asserting success vs. error.
 - Reuse helpers from `test_utils` instead of writing custom ones when possible.
 - **`add_commit` and table setup in tests:** `add_commit` takes a `table_root` string and
   resolves it to an absolute object-store path. The `table_root` must be a proper URL string
@@ -153,9 +159,9 @@ is the source of truth. Key concepts:
   `allowColumnDefaults`, `changeDataFeed`, `identityColumns`, `rowTracking`,
   `domainMetadata`, `icebergCompatV1`, `icebergCompatV2`, `clustering`,
   `inCommitTimestamp`
-- Reader + writer: `columnMapping`, `deletionVectors`, `timestampNtz`,
-  `v2Checkpoint`, `vacuumProtocolCheck`, `variantType`, `variantType-preview`,
-  `typeWidening`
+- Reader + writer: `catalogManaged`, `catalogOwned-preview`, `columnMapping`,
+  `deletionVectors`, `timestampNtz`, `v2Checkpoint`, `vacuumProtocolCheck`,
+  `variantType`, `variantType-preview`, `typeWidening`
 
 Keep this list updated when new protocol features are added to kernel.
 

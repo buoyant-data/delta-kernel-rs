@@ -33,6 +33,7 @@
 #![allow(unreachable_pub, dead_code)]
 
 use std::marker::PhantomData;
+use std::sync::OnceLock;
 
 use crate::actions::DomainMetadata;
 use crate::committer::Committer;
@@ -176,6 +177,7 @@ impl CreateTableTransaction {
             is_blind_append: false,
             dv_matched_files: vec![],
             physical_clustering_columns: clustering_columns,
+            shared_write_state: OnceLock::new(),
             _state: PhantomData,
         })
     }

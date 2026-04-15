@@ -364,7 +364,8 @@ impl<E: TaskExecutor> ParquetHandler for DefaultParquetHandler<E> {
         self.task_executor.block_on(async move {
             let path = Path::from_url_path(location.path())?;
 
-            // Get first batch to initialize writer with schema
+            // Get first batch to initialize writer with schema, this is done outside of the loop to
+            // avoid needing to nest a blocking iteration here
             let first_batch = data.next().ok_or_else(|| {
                 Error::generic("Cannot write parquet file with empty data iterator")
             })??;

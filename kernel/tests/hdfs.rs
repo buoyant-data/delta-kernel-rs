@@ -9,12 +9,13 @@
 
 use buoyant_kernel as delta_kernel;
 
-use delta_kernel::Snapshot;
-use hdfs_native::{Client, WriteOptions};
-use hdfs_native_object_store::minidfs::MiniDfs;
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
+
+use delta_kernel::Snapshot;
+use hdfs_native::{Client, WriteOptions};
+use hdfs_native_object_store::minidfs::MiniDfs;
 extern crate walkdir;
 use walkdir::WalkDir;
 

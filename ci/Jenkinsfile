@@ -15,12 +15,6 @@ pipeline {
     retry(1)
   }
 
-  post {
-    always {
-      sh 'cargo clean'
-    }
-  }
-
   stages {
     stage('Rust') {
       failFast true

@@ -31,7 +31,7 @@ if [ "${FLAVOR}" = "python" ]; then
   if [ $? -ne 0 ]; then
     # Some of the machines in the cluster may not have some CPU instructions that
     # polars is compiled against
-    (source python/.venv/bin/activate && uv pip install "polars[rtcompat]==1.39.2")
+    (source python/.venv/bin/activate && uv pip install "polars[rtcompat]==1.39")
   fi
   set -e
   gmake -C python unit-test

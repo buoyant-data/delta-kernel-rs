@@ -10,7 +10,6 @@ use std::future::Future;
 use std::sync::Arc;
 
 use futures::stream::{BoxStream, StreamExt as _};
-use tokio::sync::mpsc::error::TryRecvError;
 use url::Url;
 
 use self::executor::TaskExecutor;
@@ -52,54 +51,33 @@ pub(crate) fn stream_future_to_iter<T: Send + 'static, E: executor::TaskExecutor
     task_executor: Arc<E>,
     stream_future: impl Future<Output = DeltaResult<BoxStream<'static, T>>> + Send + 'static,
 ) -> DeltaResult<Box<dyn Iterator<Item = T> + Send>> {
-    let (sender, receiver) = tokio::sync::mpsc::channel(128);
-
-    // This provides some blocking iterator style semantics without requiring the [`TaskExecutor`]
-    // block_on functionality which cannot be safely nested.
-    task_executor.spawn(async move {
-        match stream_future.await {
-            Ok(mut stream) => {
-                while let Some(f) = stream.next().await {
-                    let sender = sender.clone();
-                    match sender.send(f).await {
-                        Ok(_) => {},
-                        Err(e) => tracing::error!("Unknown error when filling the stream iterator: {e:?}"),
-                    }
-                }
-            }
-            Err(e) => {
-                tracing::error!("Failed to resolve the stream future: {e:?}");
-                drop(sender);
-            }
-        }
-    });
-
     Ok(Box::new(BlockingStreamIterator {
-        receiver,
+        stream: Some(task_executor.block_on(stream_future)?),
         task_executor,
     }))
 }
 
 struct BlockingStreamIterator<T: Send + 'static, E: executor::TaskExecutor> {
-    receiver: tokio::sync::mpsc::Receiver<T>,
-    /// The `task_executor` is held onto the iterator to make sure that the `task_executor`
-    /// continues to be held for the duration of the execution of the iterator.
-    ///
-    /// Without this hold on a reference some parallel tests will fail
-    #[allow(unused)]
+    stream: Option<BoxStream<'static, T>>,
     task_executor: Arc<E>,
 }
 
 impl<T: Send + 'static, E: executor::TaskExecutor> Iterator for BlockingStreamIterator<T, E> {
     type Item = T;
+
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.receiver.try_recv() {
-                Ok(item) => return Some(item),
-                Err(TryRecvError::Empty) => {},
-                Err(_) => return None,
-            }
+        // Move the stream into the future so we can block on it.
+        let mut stream = self.stream.take()?;
+        let (item, stream) = self
+            .task_executor
+            .block_on(async move { (stream.next().await, stream) });
+
+        // We must not poll an exhausted stream after it returned None.
+        if item.is_some() {
+            self.stream = Some(stream);
         }
+
+        item
     }
 }
 

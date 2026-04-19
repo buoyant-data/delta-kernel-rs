@@ -105,10 +105,8 @@ pub mod tokio {
                     .enable_all()
                     .build()
                     .unwrap();
-                handle_sender
-                    .send(rt.handle().clone())
-                    .expect("Failed to send handle");
-
+                let handle = rt.handle().clone();
+                handle_sender.send(handle).unwrap();
                 rt.block_on(async move {
                     while let Some(task) = receiver.recv().await {
                         tokio::task::spawn(task);
@@ -152,9 +150,6 @@ pub mod tokio {
             T: Future + Send + 'static,
             T::Output: Send + 'static,
         {
-            if let Some(_id) = tokio::task::try_id() {
-                tracing::warn!("Oh bollocks. It looks like TokioBackgroundExecutor::block_on was called in a nested fashion that could deadlock");
-            }
             // We cannot call `tokio::runtime::Runtime::block_on` here because
             // it panics if called within an async context. So instead we spawn
             // the future on the runtime and send the result back using a channel.
@@ -162,7 +157,7 @@ pub mod tokio {
 
             let fut = Box::pin(async move {
                 let task_output = task.await;
-                tokio::task::spawn(async move {
+                tokio::task::spawn_blocking(move || {
                     sender.send(task_output).ok();
                 })
                 .await
@@ -170,6 +165,7 @@ pub mod tokio {
             });
 
             self.send_future(fut);
+
             receiver
                 .recv()
                 .expect("TokioBackgroundExecutor has crashed")

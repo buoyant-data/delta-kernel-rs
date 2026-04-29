@@ -2013,9 +2013,9 @@ async fn test_commit_cover_zero_byte_compaction_uses_commits() {
 }
 
 #[test]
-fn test_validate_listed_log_file_in_order_compaction_files() {
+fn test_validate_listed_log_file_in_order_compaction_files() -> DeltaResult<()> {
     let log_root = Url::parse("file:///_delta_log/").unwrap();
-    assert!(LogSegment::try_new(
+    let _ = LogSegment::try_new(
         LogSegmentFiles {
             ascending_commit_files: vec![create_log_path(
                 "file:///_delta_log/00000000000000000001.json",
@@ -2033,8 +2033,8 @@ fn test_validate_listed_log_file_in_order_compaction_files() {
         log_root,
         None,
         None,
-    )
-    .is_ok());
+    )?;
+    Ok(())
 }
 
 #[test]

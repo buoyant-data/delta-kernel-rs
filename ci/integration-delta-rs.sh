@@ -4,14 +4,10 @@ FLAVOR=$1
 set -eau pipefail
 
 if [ -d delta-rs ]; then
-  pushd delta-rs
-  git reset --hard
-  git fetch --all
-  git pull
-  popd
-else
-  git clone --depth 1 --branch buoyant/dev https://git.buoyantdata.com/delta-io/delta-rs
+  rm -rf delta-rs
 fi;
+
+git clone --depth 1 --branch buoyant/main https://git.buoyantdata.com/delta-io/delta-rs
 
 pushd delta-rs
 

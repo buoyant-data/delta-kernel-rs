@@ -15,7 +15,7 @@ use delta_kernel::expressions::{ColumnName, Scalar};
 use delta_kernel::object_store::local::LocalFileSystem;
 use delta_kernel::object_store::path::Path;
 use delta_kernel::object_store::{DynObjectStore, ObjectStoreExt as _};
-use delta_kernel::schema::{ColumnMetadataKey, DataType, MetadataValue, StructField, StructType};
+use delta_kernel::schema::{DataType, StructField, StructType};
 use delta_kernel::table_features::{get_any_level_column_physical_name, ColumnMappingMode};
 use delta_kernel::{Engine, FileMeta, Snapshot};
 use test_utils::{
@@ -108,7 +108,7 @@ async fn test_column_mapping_write(
 
     // Step 3: Checkpoint and verify add.stats uses correct column names
     let snapshot_for_checkpoint = latest_snapshot.clone();
-    snapshot_for_checkpoint.checkpoint(engine.as_ref())?;
+    snapshot_for_checkpoint.checkpoint(engine.as_ref(), None)?;
     let ckpt_snapshot = Snapshot::builder_for(table_url.clone()).build(engine.as_ref())?;
     let add_actions = read_add_infos(&ckpt_snapshot, engine.as_ref())?;
     let mut all_stats: Vec<_> = add_actions
@@ -210,11 +210,10 @@ async fn test_column_mapping_write(
             let logical_field = resolve_field(logical_schema.as_ref(), logical_path).unwrap();
             match cm_mode {
                 ColumnMappingMode::Id | ColumnMappingMode::Name => {
-                    let expected_id =
-                        match logical_field.get_config_value(&ColumnMetadataKey::ColumnMappingId) {
-                            Some(MetadataValue::Number(n)) => *n as i32,
-                            other => panic!("expected ColumnMappingId number, got {other:?}"),
-                        };
+                    let expected_id = logical_field
+                        .column_mapping_id()
+                        .expect("expected ColumnMappingId number")
+                        as i32;
                     assert_eq!(
                         field_id,
                         Some(expected_id),

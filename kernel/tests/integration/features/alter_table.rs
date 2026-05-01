@@ -1,6 +1,6 @@
 //! Integration tests for ALTER TABLE schema evolution.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use buoyant_kernel as delta_kernel;
@@ -9,7 +9,10 @@ use delta_kernel::arrow::record_batch::RecordBatch;
 use delta_kernel::committer::FileSystemCommitter;
 use delta_kernel::engine::arrow_conversion::TryIntoArrow as _;
 use delta_kernel::expressions::{column_name, ColumnName, Scalar};
-use delta_kernel::schema::{ArrayType, DataType, MapType, SchemaRef, StructField, StructType};
+use delta_kernel::schema::{
+    ArrayType, ColumnMetadataKey, DataType, MapType, MetadataValue, SchemaRef, StructField,
+    StructType,
+};
 use delta_kernel::snapshot::Snapshot;
 use delta_kernel::transaction::create_table::create_table;
 use delta_kernel::transaction::data_layout::DataLayout;
@@ -33,20 +36,36 @@ fn committer() -> Box<FileSystemCommitter> {
     Box::new(FileSystemCommitter::new())
 }
 
+fn max_column_id(snap: &Snapshot) -> i64 {
+    snap.table_configuration()
+        .metadata()
+        .configuration()
+        .get("delta.columnMapping.maxColumnId")
+        .and_then(|v| v.parse().ok())
+        .expect("maxColumnId should be set and parseable on a CM table")
+}
+
 // ============================================================================
 // Add column tests
 // ============================================================================
 
+/// End-to-end lifecycle: write, ALTER to add columns, scan, write populated rows, scan again.
+/// Each column is added in its own alter commit with a checkpoint after, exercising
+/// "do some ops -> checkpoint -> do more ops -> checkpoint". Under CM, also verifies fresh
+/// ids/physical names and that `maxColumnId` advanced.
 #[rstest]
-#[case::one_column(1)]
-#[case::three_columns(3)]
-#[tokio::test]
-async fn add_columns_reload_snapshot_verify_schema(
-    #[case] num_columns: usize,
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn add_columns_lifecycle(
+    #[values(None, Some("name"), Some("id"))] cm_mode: Option<&str>,
+    #[values(1, 3)] num_columns: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let (_temp_dir, table_path, engine) = test_table_setup()?;
+    let (_temp_dir, table_path, engine) = test_table_setup_mt()?;
+    let properties: Vec<(&str, &str)> = cm_mode
+        .map(|m| vec![("delta.columnMapping.mode", m)])
+        .unwrap_or_default();
     let snapshot =
-        create_table_and_load_snapshot(&table_path, simple_schema(), engine.as_ref(), &[])?;
+        create_table_and_load_snapshot(&table_path, simple_schema(), engine.as_ref(), &properties)?;
+    let original_max_id = cm_mode.map(|_| max_column_id(&snapshot));
 
     // Write two rows with only the original columns populated.
     let batch = RecordBatch::try_new(
@@ -61,35 +80,62 @@ async fn add_columns_reload_snapshot_verify_schema(
 
     let new_col_names: Vec<String> = (0..num_columns).map(|i| format!("col_{i}")).collect();
 
-    // First add_column transitions Ready -> Modifying; subsequent calls stay in Modifying.
-    let (first, rest) = new_col_names.split_first().unwrap();
-    let committed = rest
-        .iter()
-        .fold(
-            snapshot
-                .alter_table()
-                .add_column(StructField::nullable(first, DataType::STRING)),
-            |b, name| b.add_column(StructField::nullable(name, DataType::STRING)),
-        )
-        .build(engine.as_ref(), committer())?
-        .commit(engine.as_ref())?
-        .unwrap_committed();
+    // One alter+checkpoint cycle per column.
+    let mut current = snapshot;
+    for name in &new_col_names {
+        let committed = current
+            .alter_table()
+            .add_column(StructField::nullable(name, DataType::STRING))
+            .build(engine.as_ref(), committer())?
+            .commit(engine.as_ref())?
+            .unwrap_committed();
+        let post = committed
+            .post_commit_snapshot()
+            .expect("post-commit snapshot");
+        let (_, ckpt) = post.clone().checkpoint(engine.as_ref(), None)?;
+        current = ckpt;
+    }
 
-    // Verify post-commit snapshot has evolved schema
-    let post_snap = committed
-        .post_commit_snapshot()
-        .expect("post-commit snapshot");
-    assert_eq!(post_snap.schema().fields().count(), 2 + num_columns);
-
-    // Reload from storage to verify persistence
+    // Reload from storage to verify persistence. v0 = create, v1 = write, then `num_columns`
+    // alter commits.
+    let alter_end_version = 1 + num_columns as u64;
     let reloaded = Snapshot::builder_for(&table_path).build(engine.as_ref())?;
-    assert_eq!(reloaded.version(), 2);
+    assert_eq!(reloaded.version(), alter_end_version);
     let schema = reloaded.schema();
     assert_eq!(schema.fields().count(), 2 + num_columns);
     for name in &new_col_names {
         let field = schema.field(name).expect("added field should exist");
         assert_eq!(field.data_type(), &DataType::STRING);
         assert!(field.is_nullable());
+    }
+
+    // When CM is enabled: each new column must have a fresh id/physical name, and the
+    // table's maxColumnId must have advanced past the original value. When CM is disabled:
+    // the property must remain absent.
+    if let Some(orig) = original_max_id {
+        for name in &new_col_names {
+            let field = schema.field(name).unwrap();
+            let cm_id = field.column_mapping_id().expect("CM id should be assigned");
+            assert!(
+                cm_id > orig,
+                "new column '{name}' id {cm_id} must exceed original max {orig}"
+            );
+            match field
+                .get_config_value(&ColumnMetadataKey::ColumnMappingPhysicalName)
+                .expect("physical name should be assigned")
+            {
+                MetadataValue::String(s) => assert!(s.starts_with("col-")),
+                other => panic!("expected String, got {other:?}"),
+            }
+        }
+        assert!(max_column_id(&reloaded) > orig);
+    } else {
+        assert!(reloaded
+            .table_configuration()
+            .metadata()
+            .configuration()
+            .get("delta.columnMapping.maxColumnId")
+            .is_none());
     }
 
     // Scan back -- old rows should have NULL for every new column.
@@ -121,7 +167,7 @@ async fn add_columns_reload_snapshot_verify_schema(
 
     // Scan back -- 4 rows total, each new column has 2 NULLs (old rows) and 2 values (new rows).
     let final_snap = Snapshot::builder_for(&table_path).build(engine.as_ref())?;
-    assert_eq!(final_snap.version(), 3);
+    assert_eq!(final_snap.version(), alter_end_version + 1);
     let scan = final_snap.scan_builder().build()?;
     let batches = test_utils::read_scan(&scan, engine.clone())?;
     let total_rows: usize = batches.iter().map(|b| b.num_rows()).sum();
@@ -137,7 +183,11 @@ async fn add_columns_reload_snapshot_verify_schema(
     Ok(())
 }
 
-/// Adding columns of complex types (struct, array, map) on a non-CM table. Verifies
+/// Adding columns of complex types (struct, array, map) -- with and without column mapping.
+/// Verifies the data type round-trips and, under CM, that every reachable struct field
+/// receives a distinct fresh ID and `maxColumnId` advances accordingly. `expected_id_count`
+/// is the number of CM IDs the column should receive (1 for the parent + however many inner
+/// struct fields the recursion reaches).
 #[rstest]
 #[case::struct_column(
     StructField::nullable(
@@ -146,18 +196,78 @@ async fn add_columns_reload_snapshot_verify_schema(
             StructField::nullable("city", DataType::STRING),
             StructField::nullable("zip", DataType::STRING),
         ]).unwrap(),
-    )
+    ),
+    3,
 )]
-#[case::array_of_primitive(StructField::nullable("tags", ArrayType::new(DataType::STRING, true),))]
-#[case::map_of_primitives(StructField::nullable(
-    "labels",
-    MapType::new(DataType::STRING, DataType::INTEGER, true),
-))]
+#[case::array_of_primitive(
+    StructField::nullable("tags", ArrayType::new(DataType::STRING, true)),
+    1
+)]
+#[case::map_of_primitives(
+    StructField::nullable("labels", MapType::new(DataType::STRING, DataType::INTEGER, true)),
+    1
+)]
+#[case::array_of_struct(
+    StructField::nullable(
+        "items",
+        ArrayType::new(
+            DataType::Struct(Box::new(
+                StructType::try_new(vec![
+                    StructField::nullable("a", DataType::STRING),
+                    StructField::nullable("b", DataType::INTEGER),
+                ]).unwrap(),
+            )),
+            true,
+        ),
+    ),
+    3,
+)]
+#[case::map_value_is_struct(
+    StructField::nullable(
+        "by_id",
+        MapType::new(
+            DataType::STRING,
+            DataType::Struct(Box::new(
+                StructType::try_new(vec![
+                    StructField::nullable("a", DataType::STRING),
+                    StructField::nullable("b", DataType::INTEGER),
+                ]).unwrap(),
+            )),
+            true,
+        ),
+    ),
+    3,
+)]
+#[case::map_key_is_struct(
+    StructField::nullable(
+        "lookup",
+        MapType::new(
+            DataType::Struct(Box::new(
+                StructType::try_new(vec![
+                    StructField::nullable("a", DataType::STRING),
+                    StructField::nullable("b", DataType::INTEGER),
+                ]).unwrap(),
+            )),
+            DataType::INTEGER,
+            true,
+        ),
+    ),
+    3,
+)]
 #[tokio::test]
-async fn add_complex_type_column(#[case] field: StructField) -> DeltaResult<()> {
+async fn add_complex_type_column(
+    #[case] field: StructField,
+    #[case] expected_id_count: usize,
+    #[values(None, Some("name"), Some("id"))] cm_mode: Option<&str>,
+) -> DeltaResult<()> {
     let (_temp_dir, table_path, engine) = test_table_setup()?;
+    let properties: Vec<(&str, &str)> = cm_mode
+        .map(|m| vec![("delta.columnMapping.mode", m)])
+        .unwrap_or_default();
     let snapshot =
-        create_table_and_load_snapshot(&table_path, simple_schema(), engine.as_ref(), &[])?;
+        create_table_and_load_snapshot(&table_path, simple_schema(), engine.as_ref(), &properties)?;
+    let original_max_id = cm_mode.map(|_| max_column_id(&snapshot));
+
     let field_name = field.name().to_string();
     let expected_type = field.data_type().clone();
 
@@ -171,7 +281,27 @@ async fn add_complex_type_column(#[case] field: StructField) -> DeltaResult<()> 
     let reloaded = Snapshot::builder_for(table_path).build(engine.as_ref())?;
     let schema = reloaded.schema();
     let added = schema.field(&field_name).expect("added field should exist");
-    assert_eq!(added.data_type(), &expected_type);
+
+    if let Some(orig_max) = original_max_id {
+        // Under CM, inner struct fields carry CM metadata that `expected_type` doesn't;
+        // strict DataType equality won't hold. The ID-count check below implicitly verifies
+        // that the type structure round-tripped correctly.
+        let ids = added.collect_column_mapping_ids();
+        let unique: HashSet<_> = ids.iter().copied().collect();
+        assert_eq!(ids.len(), expected_id_count, "expected ID count mismatch");
+        assert_eq!(unique.len(), ids.len(), "all assigned IDs must be distinct");
+        assert!(
+            ids.iter().all(|&id| id > orig_max),
+            "all assigned IDs must exceed original max"
+        );
+        assert_eq!(
+            max_column_id(&reloaded),
+            ids.iter().copied().max().unwrap(),
+            "table maxColumnId must equal the largest assigned ID",
+        );
+    } else {
+        assert_eq!(added.data_type(), &expected_type);
+    }
     Ok(())
 }
 
@@ -188,11 +318,6 @@ async fn add_complex_type_column(#[case] field: StructField) -> DeltaResult<()> 
     "timestampNtz"
 )]
 #[case::non_nullable(&[], StructField::not_null("age", DataType::INTEGER), "non-nullable")]
-#[case::column_mapping_enabled(
-    &[("delta.columnMapping.mode", "name")],
-    StructField::nullable("email", DataType::STRING),
-    "column mapping"
-)]
 #[tokio::test]
 async fn add_column_failures(
     #[case] properties: &[(&str, &str)],
@@ -238,7 +363,7 @@ async fn back_to_back_alters_with_checkpoint() -> Result<(), Box<dyn std::error:
         .expect("post-commit snapshot at v1");
 
     // Checkpoint at v1.
-    let (_, v1_ckpt) = v1_snap.clone().checkpoint(engine.as_ref())?;
+    let (_, v1_ckpt) = v1_snap.clone().checkpoint(engine.as_ref(), None)?;
 
     // v2: add column "b" on top of the checkpointed snapshot.
     let v2 = v1_ckpt
@@ -447,7 +572,7 @@ async fn set_nullable_on_layout_column_with_checkpoint(
     assert!(v2_snap.schema().field(col_name).unwrap().is_nullable());
 
     // Checkpoint at v2 so reload exercises the checkpoint path.
-    v2_snap.clone().checkpoint(engine.as_ref())?;
+    v2_snap.clone().checkpoint(engine.as_ref(), None)?;
 
     // Reload from scratch and verify the schema and row survive.
     let reloaded = Snapshot::builder_for(&table_path).build(engine.as_ref())?;
@@ -484,27 +609,64 @@ async fn set_nullable_nonexistent_column_fails() -> DeltaResult<()> {
     Ok(())
 }
 
+// ============================================================================
+// CHAIN tests
+// ============================================================================
+
 /// Alternating chain: ADD COLUMN, SET NULLABLE, ADD COLUMN, SET NULLABLE. Verifies that
 /// chaining mixed ops applies them in order and produces the expected final schema. Each
-/// SET NULLABLE flips a still-NOT-NULL column from the original schema.
-#[tokio::test]
-async fn chain_add_column_and_set_nullable() -> DeltaResult<()> {
-    let (_temp_dir, table_path, engine) = test_table_setup()?;
+/// SET NULLABLE flips a still-NOT-NULL column from the original schema. Under CM, also
+/// verifies existing fields' column mapping IDs are preserved by set_nullable while
+/// add_column receives a new CM ID and bumps maxColumnId.
+#[rstest]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn chain_add_column_and_set_nullable(
+    #[values(None, Some("name"), Some("id"))] cm_mode: Option<&str>,
+) -> DeltaResult<()> {
+    let (_temp_dir, table_path, engine) = test_table_setup_mt()?;
     let schema = Arc::new(StructType::try_new(vec![
         StructField::not_null("id", DataType::INTEGER),
         StructField::not_null("name", DataType::STRING),
     ])?);
-    let snapshot = create_table_and_load_snapshot(&table_path, schema, engine.as_ref(), &[])?;
+    let properties: Vec<(&str, &str)> = cm_mode
+        .map(|m| vec![("delta.columnMapping.mode", m)])
+        .unwrap_or_default();
+    let snapshot =
+        create_table_and_load_snapshot(&table_path, schema, engine.as_ref(), &properties)?;
 
-    snapshot
+    let original_id_cm_id = cm_mode.map(|_| {
+        snapshot
+            .schema()
+            .field("id")
+            .unwrap()
+            .column_mapping_id()
+            .expect("existing field should already have a column mapping ID")
+    });
+    let original_max_id = cm_mode.map(|_| max_column_id(&snapshot));
+
+    // Two alter+checkpoint cycles: (add email + nullable id), (add age + nullable name).
+    let v1 = snapshot
         .alter_table()
         .add_column(StructField::nullable("email", DataType::STRING))
         .set_nullable(column_name!("id"))
+        .build(engine.as_ref(), committer())?
+        .commit(engine.as_ref())?
+        .unwrap_committed();
+    let v1_snap = v1
+        .post_commit_snapshot()
+        .expect("post-commit snapshot at v1");
+    let (_, v1_ckpt) = v1_snap.clone().checkpoint(engine.as_ref(), None)?;
+    let v2 = v1_ckpt
+        .alter_table()
         .add_column(StructField::nullable("age", DataType::INTEGER))
         .set_nullable(column_name!("name"))
         .build(engine.as_ref(), committer())?
         .commit(engine.as_ref())?
         .unwrap_committed();
+    let v2_snap = v2
+        .post_commit_snapshot()
+        .expect("post-commit snapshot at v2");
+    v2_snap.clone().checkpoint(engine.as_ref(), None)?;
 
     let reloaded = Snapshot::builder_for(table_path).build(engine.as_ref())?;
     let schema = reloaded.schema();
@@ -513,5 +675,64 @@ async fn chain_add_column_and_set_nullable() -> DeltaResult<()> {
         let field = schema.field(name).expect("field should be present");
         assert!(field.is_nullable(), "field '{name}' should be nullable");
     }
+
+    if let (Some(orig_id), Some(orig_max)) = (original_id_cm_id, original_max_id) {
+        for added in ["email", "age"] {
+            assert!(
+                schema.field(added).unwrap().column_mapping_id().is_some(),
+                "added field '{added}' should have a column mapping ID"
+            );
+        }
+        let id_after = schema
+            .field("id")
+            .unwrap()
+            .column_mapping_id()
+            .expect("existing id column mapping");
+        assert_eq!(id_after, orig_id, "existing id CM id must not change");
+        assert!(
+            max_column_id(&reloaded) > orig_max,
+            "chained add_column must bump maxColumnId"
+        );
+    }
+
+    Ok(())
+}
+
+fn field_with_stray_cm_id(name: &str, ty: DataType) -> StructField {
+    let mut f = StructField::nullable(name, ty);
+    f.metadata.insert(
+        ColumnMetadataKey::ColumnMappingId.as_ref().to_string(),
+        MetadataValue::Number(99),
+    );
+    f
+}
+
+/// On a non-CM table, `apply_schema_operations` doesn't reject stray CM metadata up front --
+/// `StructType::make_physical` (run from `TableConfiguration::try_new_with_schema`) is the
+/// gate. This test locks in that downstream rejection, including for nested annotations.
+#[rstest]
+#[case::top_level(field_with_stray_cm_id("tainted", DataType::STRING))]
+#[case::nested_in_struct(StructField::nullable(
+    "outer",
+    StructType::try_new(vec![field_with_stray_cm_id("inner", DataType::STRING)]).unwrap(),
+))]
+#[tokio::test]
+async fn add_column_with_stray_cm_metadata_on_non_cm_table_fails(
+    #[case] field: StructField,
+) -> DeltaResult<()> {
+    let (_temp_dir, table_path, engine) = test_table_setup()?;
+    let snapshot =
+        create_table_and_load_snapshot(&table_path, simple_schema(), engine.as_ref(), &[])?;
+
+    let err = snapshot
+        .alter_table()
+        .add_column(field)
+        .build(engine.as_ref(), committer())
+        .unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("column mapping") || msg.contains("columnMapping"),
+        "error should mention column mapping, got: {msg}"
+    );
     Ok(())
 }

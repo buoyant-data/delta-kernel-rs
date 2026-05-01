@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 readme.workspace = true
 rust-version.workspace = true
-version.workspace = true
+version = "1.0.0"
 
 # for cargo-release
 [package.metadata.release]

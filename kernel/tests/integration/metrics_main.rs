@@ -2,6 +2,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
+use buoyant_kernel as delta_kernel;
+
 use delta_kernel::engine::default::DefaultEngineBuilder;
 use delta_kernel::metrics::{MetricEvent, MetricsReporter, WithMetricsReporterLayer as _};
 use delta_kernel::Snapshot;

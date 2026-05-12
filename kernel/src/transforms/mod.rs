@@ -15,6 +15,7 @@ pub use self::schema::{SchemaDepthChecker, SchemaTransform};
 ///
 /// Example: fallible schema visitor
 /// ```rust,no_run
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::transform_output_type;
 /// # use delta_kernel::schema::StructField;
 /// # use delta_kernel::transforms::SchemaTransform;
@@ -33,6 +34,7 @@ pub use self::schema::{SchemaDepthChecker, SchemaTransform};
 /// Example: infallible filtering expression transform
 /// ```rust,no_run
 /// # use std::borrow::Cow;
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::transform_output_type;
 /// # use delta_kernel::expressions::ColumnName;
 /// # use delta_kernel::transforms::ExpressionTransform;

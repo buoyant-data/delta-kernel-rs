@@ -10,7 +10,6 @@ use buoyant_kernel as delta_kernel;
 use delta_kernel::actions::deletion_vector_writer::{
     KernelDeletionVector, StreamingDeletionVectorWriter,
 };
-use delta_kernel::committer::FileSystemCommitter;
 use delta_kernel::engine_data::FilteredEngineData;
 use delta_kernel::object_store::ObjectStoreExt as _;
 use delta_kernel::schema::{DataType, StructField, StructType};
@@ -20,7 +19,7 @@ use itertools::Itertools;
 use tempfile::tempdir;
 use test_utils::{
     create_add_files_metadata, create_table, engine_store_setup, generate_batch, into_record_batch,
-    record_batch_to_bytes, IntoArray,
+    load_and_begin_transaction, record_batch_to_bytes, IntoArray,
 };
 
 /// Helper to write a parquet file with the given data to the table.
@@ -92,9 +91,7 @@ fn get_write_context(
     table_url: &url::Url,
     engine: &dyn delta_kernel::Engine,
 ) -> Result<delta_kernel::transaction::WriteContext, Box<dyn std::error::Error>> {
-    let snapshot = Snapshot::builder_for(table_url.clone()).build(engine)?;
-    let txn = snapshot.transaction(Box::new(FileSystemCommitter::new()), engine)?;
-    Ok(txn.unpartitioned_write_context()?)
+    Ok(load_and_begin_transaction(table_url.clone(), engine)?.unpartitioned_write_context()?)
 }
 
 /// Helper to write a deletion vector to object store and return its descriptor.
@@ -128,9 +125,7 @@ fn create_dv_update_transaction(
     table_url: &url::Url,
     engine: &dyn delta_kernel::Engine,
 ) -> Result<delta_kernel::transaction::Transaction, Box<dyn std::error::Error>> {
-    let snapshot = Snapshot::builder_for(table_url.clone()).build(engine)?;
-    Ok(snapshot
-        .transaction(Box::new(FileSystemCommitter::new()), engine)?
+    Ok(load_and_begin_transaction(table_url.clone(), engine)?
         .with_engine_info("test engine")
         .with_operation("DELETE".to_string()))
 }
@@ -249,10 +244,7 @@ async fn test_write_deletion_vectors_end_to_end() -> Result<(), Box<dyn std::err
         write_parquet_file(&store, &table_url, "2", &data_batch_2).await?;
 
     // Step 2: Add both files to the table via a transaction
-    let snapshot = Snapshot::builder_for(table_url.clone()).build(engine.as_ref())?;
-    let mut txn = snapshot
-        .clone()
-        .transaction(Box::new(FileSystemCommitter::new()), engine.as_ref())?
+    let mut txn = load_and_begin_transaction(table_url.clone(), engine.as_ref())?
         .with_engine_info("test engine")
         .with_operation("WRITE".to_string());
 
@@ -261,8 +253,18 @@ async fn test_write_deletion_vectors_end_to_end() -> Result<(), Box<dyn std::err
     let add_metadata = create_add_files_metadata(
         add_files_schema,
         vec![
-            (&data_file_path_1, parquet_data_len_1 as i64, 1000000, 10),
-            (&data_file_path_2, parquet_data_len_2 as i64, 1000000, 10),
+            (
+                &data_file_path_1,
+                parquet_data_len_1 as i64,
+                1000000,
+                Some(10),
+            ),
+            (
+                &data_file_path_2,
+                parquet_data_len_2 as i64,
+                1000000,
+                Some(10),
+            ),
         ],
     )?;
 

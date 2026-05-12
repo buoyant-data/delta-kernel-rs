@@ -24,7 +24,7 @@ use delta_kernel::transaction::create_table::create_table;
 use delta_kernel::transaction::data_layout::DataLayout;
 use delta_kernel::Snapshot;
 use rstest::rstest;
-use test_utils::{read_scan, test_table_setup_mt, write_batch_to_table};
+use test_utils::{begin_transaction, read_scan, test_table_setup_mt, write_batch_to_table};
 
 // ==============================================================================
 // Tests
@@ -39,12 +39,14 @@ use test_utils::{read_scan, test_table_setup_mt, write_batch_to_table};
 #[tokio::test(flavor = "multi_thread")]
 async fn test_write_partitioned_normal_values_roundtrip(
     #[case] cm_mode: ColumnMappingMode,
+    #[values(true, false)] write_partition_values_parsed: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // ===== Step 1: Create table and write one row with normal partition values. =====
     let (_tmp_dir, table_path, snapshot, engine) = setup_and_write(
         all_types_schema(),
         PARTITION_COLS,
         cm_mode,
+        write_partition_values_parsed,
         normal_arrow_columns(),
         normal_partition_values()?,
     )
@@ -117,6 +119,8 @@ async fn test_write_partitioned_normal_values_roundtrip(
     }
 
     // ===== Step 4: Scan and verify values survive checkpoint + reload. =====
+    // This is the only step affected by `write_partition_values_parsed`: the
+    // post-checkpoint scan reads back through `partitionValues_parsed`.
     verify_and_checkpoint(&snapshot, engine, assert_normal_values)?;
 
     Ok(())
@@ -131,12 +135,14 @@ async fn test_write_partitioned_normal_values_roundtrip(
 #[tokio::test(flavor = "multi_thread")]
 async fn test_write_partitioned_null_values_roundtrip(
     #[case] cm_mode: ColumnMappingMode,
+    #[values(true, false)] write_partition_values_parsed: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // ===== Step 1: Create table and write one row with all-null partition values. =====
     let (_tmp_dir, table_path, snapshot, engine) = setup_and_write(
         all_types_schema(),
         PARTITION_COLS,
         cm_mode,
+        write_partition_values_parsed,
         null_arrow_columns(),
         null_partition_values()?,
     )
@@ -170,6 +176,8 @@ async fn test_write_partitioned_null_values_roundtrip(
     }
 
     // ===== Step 4: Scan and verify all-null values survive checkpoint + reload. =====
+    // This is the only step affected by `write_partition_values_parsed`: the
+    // post-checkpoint scan reads back through `partitionValues_parsed`.
     verify_and_checkpoint(&snapshot, engine, assert_all_partition_columns_null)?;
 
     Ok(())
@@ -249,6 +257,7 @@ async fn test_write_partitioned_path_encodes_special_chars(
         schema,
         &["p"],
         cm_mode,
+        true, // write_partition_values_parsed
         vec![
             Arc::new(Int32Array::from(vec![1])),
             Arc::new(StringArray::from(vec![value])) as ArrayRef,
@@ -601,9 +610,16 @@ fn create_partitioned_table(
     schema: Arc<StructType>,
     partition_cols: &[&str],
     cm_mode: ColumnMappingMode,
+    write_partition_values_parsed: bool,
 ) -> Result<Arc<Snapshot>, Box<dyn std::error::Error>> {
     let mut builder = create_table(table_path, schema, "test/1.0")
-        .with_data_layout(DataLayout::partitioned(partition_cols));
+        .with_data_layout(DataLayout::partitioned(partition_cols))
+        .with_table_properties([(
+            // `delta.checkpoint.writeStatsAsStruct` is what turns on `partitionValues_parsed`,
+            // which (per its name) lives only in the checkpoint; commit JSON is unaffected.
+            "delta.checkpoint.writeStatsAsStruct",
+            write_partition_values_parsed.to_string(),
+        )]);
     if cm_mode != ColumnMappingMode::None {
         builder =
             builder.with_table_properties([("delta.columnMapping.mode", cm_mode_str(cm_mode))]);
@@ -669,6 +685,7 @@ async fn setup_and_write(
     schema: Arc<StructType>,
     partition_cols: &[&str],
     cm_mode: ColumnMappingMode,
+    write_partition_values_parsed: bool,
     arrow_columns: Vec<ArrayRef>,
     partition_values: HashMap<String, Scalar>,
 ) -> Result<
@@ -688,6 +705,7 @@ async fn setup_and_write(
         schema,
         partition_cols,
         cm_mode,
+        write_partition_values_parsed,
     )?;
 
     let batch = RecordBatch::try_new(arrow_schema, arrow_columns)?;
@@ -792,9 +810,7 @@ async fn test_materialized_partition_columns_excluded_from_stats(
         .build(engine.as_ref(), Box::new(FileSystemCommitter::new()))?
         .commit(engine.as_ref())?;
 
-    let snapshot = Snapshot::builder_for(&table_path).build(engine.as_ref())?;
-    let mut txn = snapshot
-        .transaction(Box::new(FileSystemCommitter::new()), engine.as_ref())?
+    let mut txn = test_utils::load_and_begin_transaction(&table_path, engine.as_ref())?
         .with_engine_info("default engine");
 
     // Build the input logical batch with all schema columns, including the partition column.
@@ -902,10 +918,16 @@ async fn test_partition_null_validation_non_materialized(
     ])?);
 
     let (_tmp_dir, table_path, engine) = test_table_setup_mt()?;
-    let snapshot = create_partitioned_table(&table_path, engine.as_ref(), schema, &["p"], cm_mode)?;
+    let snapshot = create_partitioned_table(
+        &table_path,
+        engine.as_ref(),
+        schema,
+        &["p"],
+        cm_mode,
+        false, // write_partition_values_parsed; unused, no checkpoint in this test
+    )?;
 
-    let result = snapshot
-        .transaction(Box::new(FileSystemCommitter::new()), engine.as_ref())?
+    let result = begin_transaction(snapshot, engine.as_ref())?
         .with_engine_info("default engine")
         .partitioned_write_context(HashMap::from([("p".to_string(), value)]));
 
@@ -956,28 +978,24 @@ async fn test_partition_null_validation_mixed_nullability(
         schema,
         &["p_required", "p_optional"],
         cm_mode,
+        false, // write_partition_values_parsed; unused, no checkpoint in this test
     )?;
 
-    snapshot
-        .clone()
-        .transaction(Box::new(FileSystemCommitter::new()), engine.as_ref())?
+    begin_transaction(snapshot.clone(), engine.as_ref())?
         .with_engine_info("default engine")
         .partitioned_write_context(HashMap::from([
             ("p_required".to_string(), Scalar::String("a".into())),
             ("p_optional".to_string(), Scalar::Null(DataType::STRING)),
         ]))?;
 
-    snapshot
-        .clone()
-        .transaction(Box::new(FileSystemCommitter::new()), engine.as_ref())?
+    begin_transaction(snapshot.clone(), engine.as_ref())?
         .with_engine_info("default engine")
         .partitioned_write_context(HashMap::from([
             ("p_required".to_string(), Scalar::String("a".into())),
             ("p_optional".to_string(), Scalar::String(String::new())),
         ]))?;
 
-    let err = snapshot
-        .transaction(Box::new(FileSystemCommitter::new()), engine.as_ref())?
+    let err = begin_transaction(snapshot, engine.as_ref())?
         .with_engine_info("default engine")
         .partitioned_write_context(HashMap::from([
             ("p_required".to_string(), Scalar::Null(DataType::STRING)),
@@ -1026,9 +1044,7 @@ async fn test_partition_null_validation_in_batch_materialized(
     // being filtered out), so the NOT NULL enforcement seam moves into the engine: a null
     // in a `nullable: false` field is rejected at batch construction below, independent of
     // whatever value the mock map carries here.
-    let txn = snapshot
-        .transaction(Box::new(FileSystemCommitter::new()), engine.as_ref())?
-        .with_engine_info("default engine");
+    let txn = begin_transaction(snapshot, engine.as_ref())?.with_engine_info("default engine");
     let _write_context = txn.partitioned_write_context(HashMap::from([(
         "p".to_string(),
         Scalar::String("a".into()),

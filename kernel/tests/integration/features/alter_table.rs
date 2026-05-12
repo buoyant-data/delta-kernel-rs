@@ -736,3 +736,27 @@ async fn add_column_with_stray_cm_metadata_on_non_cm_table_fails(
     );
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn alter_blocked_when_iceberg_compat_v3_enabled() -> Result<(), Box<dyn std::error::Error>> {
+    let (_temp_dir, table_path, engine) = test_table_setup_mt()?;
+    let snapshot = create_table_and_load_snapshot(
+        &table_path,
+        simple_schema(),
+        engine.as_ref(),
+        &[("delta.enableIcebergCompatV3", "true")],
+    )?;
+
+    let msg = snapshot
+        .alter_table()
+        .add_column(StructField::nullable("new_col", DataType::STRING))
+        .build(engine.as_ref(), committer())
+        .unwrap_err()
+        .to_string();
+    assert!(
+        msg.contains("ALTER TABLE is not yet supported on tables with icebergCompatV3 enabled"),
+        "unexpected error: {msg}",
+    );
+
+    Ok(())
+}

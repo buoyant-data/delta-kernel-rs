@@ -21,6 +21,7 @@ use crate::expressions::ColumnName;
 use crate::scan::data_skipping::stats_schema::{
     expected_stats_schema, stats_column_names, StatsConfig, StripFieldMetadataTransform,
 };
+use crate::schema::validation::validate_iceberg_compat_v3_no_legacy_nested_id;
 pub(crate) use crate::schema::variant_utils::validate_variant_type_feature_support;
 use crate::schema::{schema_has_invariants, SchemaRef, StructField, StructType};
 #[cfg(feature = "nanosecond-timestamps")]
@@ -200,6 +201,8 @@ impl TableConfiguration {
         validate_variant_type_feature_support(&table_config)?;
         #[cfg(feature = "nanosecond-timestamps")]
         validate_timestamp_nanos_feature_support(&table_config)?;
+        validate_iceberg_compat_v3_no_legacy_nested_id(&table_config)?;
+
         Ok(table_config)
     }
 
@@ -850,6 +853,13 @@ impl TableConfiguration {
             EnablementCheck::AlwaysIfSupported => true,
             EnablementCheck::EnabledIf(check_fn) => check_fn(&self.table_properties),
         }
+    }
+
+    /// Returns true when the table requires every AddFile to carry a non-null
+    /// `stats.numRecords`.
+    pub(crate) fn requires_stats_num_records(&self) -> bool {
+        // TODO(#1125): Add icebergCompatV2 to the list when it is supported.
+        self.is_feature_enabled(&TableFeature::IcebergCompatV3)
     }
 }
 
@@ -2288,7 +2298,7 @@ mod test {
         vec!["value", "pcol"],
     )]
     #[case::v3_supported_but_property_unset(&[], vec!["value"])]
-    fn test_physical_write_schema_materializes_pv_when_iceberg_compact_v3_enabled(
+    fn test_physical_write_schema_materializes_pv_when_iceberg_compat_v3_enabled(
         #[case] extra_props: &[(&str, &str)],
         #[case] expected_field_names: Vec<&str>,
     ) {
@@ -2329,7 +2339,7 @@ mod test {
     }
 
     #[test]
-    fn test_iceberg_compat_v3_write_rejected_as_not_supported() {
+    fn test_iceberg_compat_v3_write_supported() {
         let config = create_mock_table_config_with_cm(
             &[
                 (ENABLE_ICEBERG_COMPAT_V3, "true"),
@@ -2344,10 +2354,9 @@ mod test {
                 TableFeature::DomainMetadata,
             ],
         );
-        assert_result_error_with_message(
-            config.ensure_operation_supported(Operation::Write),
-            "Feature 'icebergCompatV3' is not supported",
-        );
+        config
+            .ensure_operation_supported(Operation::Write)
+            .expect("V3 write should be supported once kernel_support flips to Supported");
     }
 
     #[rstest]

@@ -7,6 +7,8 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use buoyant_kernel as delta_kernel;
+
 use delta_kernel::engine::default::executor::tokio::TokioBackgroundExecutor;
 use delta_kernel::engine::default::json::DefaultJsonHandler;
 use delta_kernel::engine::default::{DefaultEngine, DefaultEngineBuilder};

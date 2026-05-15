@@ -7,7 +7,7 @@ use buoyant_kernel as delta_kernel;
 
 use delta_kernel::arrow::array::{ArrayRef, Int32Array, StringArray};
 use delta_kernel::committer::FileSystemCommitter;
-use delta_kernel::crc::{Crc, FileStatsValidity};
+use delta_kernel::crc::Crc;
 use delta_kernel::engine::default::DefaultEngineBuilder;
 use delta_kernel::object_store::local::LocalFileSystem;
 use delta_kernel::schema::{DataType, StructField, StructType};
@@ -119,8 +119,6 @@ async fn test_get_current_crc_if_loaded_returns_loaded_crc() -> DeltaResult<()> 
     let file_stats = crc.file_stats().unwrap();
     assert_eq!(file_stats.table_size_bytes(), 5259);
     assert_eq!(file_stats.num_files(), 10);
-    assert_eq!(crc.num_metadata, 1);
-    assert_eq!(crc.num_protocol, 1);
 
     // Protocol and metadata should match the snapshot's table configuration
     assert_eq!(crc.protocol, *snapshot.table_configuration().protocol());
@@ -193,8 +191,6 @@ async fn test_create_table_produces_post_commit_crc() -> DeltaResult<()> {
     let file_stats = crc.file_stats().unwrap();
     assert_eq!(file_stats.num_files(), 0);
     assert_eq!(file_stats.table_size_bytes(), 0);
-    assert_eq!(crc.num_metadata, 1);
-    assert_eq!(crc.num_protocol, 1);
     assert_eq!(crc.protocol, *snapshot.table_configuration().protocol());
     assert_eq!(crc.metadata, *snapshot.table_configuration().metadata());
     let dms = crc.domain_metadata.as_ref().unwrap();
@@ -394,7 +390,7 @@ async fn test_post_commit_crc_non_incremental_op_makes_file_stats_indeterminate(
     assert_eq!(committed.commit_version(), 2);
     let snapshot_v2 = committed.post_commit_snapshot().unwrap();
     let crc_v2 = snapshot_v2.get_current_crc_if_loaded_for_testing().unwrap();
-    assert_eq!(crc_v2.file_stats_validity, FileStatsValidity::Indeterminate);
+    assert!(crc_v2.file_stats_state().is_indeterminate());
 
     Ok(())
 }
@@ -493,7 +489,7 @@ async fn test_in_memory_crc_chains_across_multiple_commits_then_writes() -> Delt
     // Verify histogram totals match disk ground truth
     let disk_sizes = parquet_file_sizes_on_disk(&table_path);
     assert_eq!(disk_sizes.len(), 5);
-    assert_histogram_totals(&crc_stats, 5, disk_sizes.iter().sum());
+    assert_histogram_totals(crc_stats, 5, disk_sizes.iter().sum());
 
     Ok(())
 }
@@ -1060,7 +1056,7 @@ async fn test_file_histogram_tracks_adds_and_removes_across_bins() -> DeltaResul
         .unwrap_committed();
     let snapshot = committed.post_commit_snapshot().unwrap();
     let crc_v0 = write_and_verify_crc(snapshot, &table_path, engine.as_ref());
-    assert_histogram_totals(&crc_v0.file_stats().unwrap(), 0, 0);
+    assert_histogram_totals(crc_v0.file_stats().unwrap(), 0, 0);
 
     // ===== v1: insert small file (< 8KB -> bin 0) =====
     let ids: ArrayRef = Arc::new(Int32Array::from(vec![1, 2, 3]));
@@ -1073,7 +1069,7 @@ async fn test_file_histogram_tracks_adds_and_removes_across_bins() -> DeltaResul
     assert_eq!(disk_sizes.len(), 1);
     let crc_v1 = write_and_verify_crc(snapshot, &table_path, engine.as_ref());
     let stats_v1 = crc_v1.file_stats().unwrap();
-    assert_histogram_totals(&stats_v1, 1, disk_sizes.iter().sum());
+    assert_histogram_totals(stats_v1, 1, disk_sizes.iter().sum());
 
     // Verify boundary metadata via public getters
     let hist = stats_v1.file_size_histogram().unwrap();
@@ -1141,7 +1137,7 @@ async fn test_file_histogram_tracks_adds_and_removes_across_bins() -> DeltaResul
     assert!(parquet_file_sizes_on_disk(&table_path).is_empty());
 
     let crc_v3 = write_and_verify_crc(snapshot, &table_path, engine.as_ref());
-    assert_histogram_totals(&crc_v3.file_stats().unwrap(), 0, 0);
+    assert_histogram_totals(crc_v3.file_stats().unwrap(), 0, 0);
 
     Ok(())
 }
@@ -1189,7 +1185,7 @@ async fn test_file_histogram_survives_disk_round_trip_then_delta_merge() -> Delt
     let disk_sizes = parquet_file_sizes_on_disk(&table_path);
     assert_eq!(disk_sizes.len(), 2);
     assert!(disk_sizes.iter().sum::<i64>() > v1_bytes);
-    assert_histogram_totals(&crc_v2.file_stats().unwrap(), 2, disk_sizes.iter().sum());
+    assert_histogram_totals(crc_v2.file_stats().unwrap(), 2, disk_sizes.iter().sum());
 
     Ok(())
 }
@@ -1282,7 +1278,7 @@ async fn test_file_histogram_with_bin_type_and_operation_type(
 
     if !incremental {
         // Non-incremental operations drop the histogram regardless of bin type
-        assert_eq!(crc_v2.file_stats_validity, FileStatsValidity::Indeterminate);
+        assert!(crc_v2.file_stats_state().is_indeterminate());
         assert!(crc_v2.file_stats().is_none());
         return Ok(());
     }
@@ -1308,7 +1304,7 @@ async fn test_file_histogram_with_bin_type_and_operation_type(
     } else {
         // Default 95-bin boundaries: all small test files land in bin 0 ([0, 8KB))
         assert_eq!(counts.len(), 95, "default bins should have 95 bins");
-        assert_histogram_totals(&stats_v2, 2, total_disk_bytes);
+        assert_histogram_totals(stats_v2, 2, total_disk_bytes);
     }
 
     Ok(())

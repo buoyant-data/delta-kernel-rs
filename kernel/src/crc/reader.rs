@@ -8,8 +8,9 @@ use crate::{DeltaResult, Engine, Error};
 ///
 /// Reads raw bytes via the storage handler and deserializes with serde_json.
 ///
-/// Returns `Ok(Crc)` on success, `Err` on any failure (file not readable, corrupt JSON, missing
-/// required fields). The caller should handle errors gracefully by falling back to log replay.
+/// Returns `Ok(Crc)` on success, `Err` on any failure (file not readable, corrupt JSON,
+/// missing required fields). The caller should handle errors gracefully by falling back to log
+/// replay.
 pub(crate) fn try_read_crc_file(engine: &dyn Engine, crc_path: &ParsedLogPath) -> DeltaResult<Crc> {
     let storage = engine.storage_handler();
     let url = crc_path.location.as_url().clone();
@@ -49,10 +50,9 @@ mod tests {
         let crc = try_read_crc_file(&engine, &crc_path).unwrap();
 
         // Verify basic fields
-        assert_eq!(crc.table_size_bytes, 5259);
-        assert_eq!(crc.num_files, 10);
-        assert_eq!(crc.num_metadata, 1);
-        assert_eq!(crc.num_protocol, 1);
+        let stats = crc.file_stats().unwrap();
+        assert_eq!(stats.table_size_bytes(), 5259);
+        assert_eq!(stats.num_files(), 10);
         assert_eq!(crc.in_commit_timestamp_opt, Some(1694758257000));
 
         // Verify protocol
@@ -105,7 +105,7 @@ mod tests {
         assert_eq!(crc.metadata, expected_metadata);
 
         // Verify domain metadatas
-        let dms = crc.domain_metadata.unwrap();
+        let dms = crc.domain_metadata.as_ref().unwrap();
         assert_eq!(dms.len(), 3);
 
         assert!(dms["delta.clustering"]
@@ -117,7 +117,7 @@ mod tests {
         assert!(dms["myApp.metadata"].configuration().contains("key"));
 
         // Verify set transactions
-        let txns = crc.set_transactions.unwrap();
+        let txns = crc.set_transactions.as_ref().unwrap();
         assert_eq!(txns.len(), 2);
         assert_eq!(txns["spark-app-1"].version, 42);
         assert_eq!(txns["spark-app-1"].last_updated, Some(1694758250000));
@@ -125,7 +125,7 @@ mod tests {
         assert_eq!(txns["streaming-job-abc"].last_updated, Some(1694758255000));
 
         // Verify file size histogram was deserialized (all 10 files in bin 0, < 8KB)
-        let hist = crc.file_size_histogram.as_ref().unwrap();
+        let hist = stats.file_size_histogram().unwrap();
         assert_eq!(hist.sorted_bin_boundaries.len(), 95);
         assert_eq!(hist.file_counts[0], 10);
         assert_eq!(hist.total_bytes[0], 5259);
@@ -133,7 +133,7 @@ mod tests {
         assert!(hist.file_counts[1..].iter().all(|&c| c == 0));
         assert!(hist.total_bytes[1..].iter().all(|&b| b == 0));
 
-        // Remaining skipped fields are still None (pending serde support on their types)
+        // These fields are on the Crc struct but not yet round-tripped through CrcRaw.
         assert!(crc.txn_id.is_none());
         assert!(crc.all_files.is_none());
         assert!(crc.num_deleted_records_opt.is_none());

@@ -1055,12 +1055,6 @@ impl TableConfiguration {
         }
     }
 
-    /// Ensures Kernel supports both scanning and writing this table.
-    pub(crate) fn ensure_read_write_supported(&self) -> KernelResult<()> {
-        self.ensure_operation_supported(Operation::Scan)?;
-        self.ensure_operation_supported(Operation::Write)
-    }
-
     /// Internal helper for read operations (Scan, Cdf, SnapshotLoad)
     fn ensure_read_supported(&self, operation: Operation) -> KernelResult<()> {
         check_reader_version_range(&self.protocol)?;

@@ -375,10 +375,6 @@ impl RetentionCalculator for CheckpointWriter {
 impl CheckpointWriter {
     /// Creates a new [`CheckpointWriter`] for the given snapshot.
     pub(crate) fn try_new(snapshot: SnapshotRef, engine: &dyn Engine) -> KernelResult<Self> {
-        snapshot
-            .table_configuration()
-            .ensure_read_write_supported()?;
-
         // We disallow checkpointing if the Snapshot is not published. If we didn't, this could
         // create gaps in the version history, thereby breaking old readers.
         snapshot.log_segment().validate_published()?;

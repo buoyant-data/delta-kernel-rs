@@ -879,51 +879,53 @@ impl Protocol {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, ToSchema, IntoStructData)]
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoStructData,
+)]
+#[serde(rename_all = "camelCase")]
 #[internal_api]
-#[cfg_attr(test, derive(Serialize, Default), serde(rename_all = "camelCase"))]
 pub(crate) struct CommitInfo {
     /// The time this logical file was created, as milliseconds since the epoch.
     /// Read: optional, write: required (that is, kernel always writes).
-    pub(crate) timestamp: Option<i64>,
+    pub timestamp: Option<i64>,
     /// The time this logical file was created, as milliseconds since the epoch. Unlike
     /// `timestamp`, this field is guaranteed to be monotonically increase with each commit.
     /// Note: If in-commit timestamps are enabled, both the following must be true:
     /// - The `inCommitTimestamp` field must always be present in CommitInfo.
     /// - The CommitInfo action must always be the first one in a commit.
-    pub(crate) in_commit_timestamp: Option<i64>,
+    pub in_commit_timestamp: Option<i64>,
     /// An arbitrary string that identifies the operation associated with this commit. This is
     /// specified by the engine. Read: optional, write: required (that is, kernel alwarys writes).
-    pub(crate) operation: Option<String>,
+    pub operation: Option<String>,
     /// Map of arbitrary string key-value pairs that provide additional information about the
     /// operation. This is specified by the connector and may be populated on write.
-    pub(crate) operation_parameters: Option<HashMap<String, Option<String>>>,
+    pub operation_parameters: Option<HashMap<String, Option<String>>>,
     /// Map of arbitrary string key-value pairs that provide operation metrics.
     /// This is specified by the engine.
-    pub(crate) operation_metrics: Option<HashMap<String, Option<String>>>,
+    pub operation_metrics: Option<HashMap<String, Option<String>>>,
     /// The version of the delta_kernel crate used to write this commit. The kernel will always
     /// write this field, but it is optional since many tables will not have this field (i.e. any
     /// tables not written by kernel).
-    pub(crate) kernel_version: Option<String>,
+    pub kernel_version: Option<String>,
     /// Whether this commit is a blind append.
-    pub(crate) is_blind_append: Option<bool>,
+    pub is_blind_append: Option<bool>,
     /// A place for the engine to store additional metadata associated with this commit
-    pub(crate) engine_info: Option<String>,
+    pub engine_info: Option<String>,
     /// A unique transaction identifier for this commit.
-    pub(crate) txn_id: Option<String>,
+    pub txn_id: Option<String>,
     /// Map of tags associated with this commit.
-    pub(crate) tags: Option<HashMap<String, Option<String>>>,
+    pub tags: Option<HashMap<String, Option<String>>>,
     /// Whether this commit changes the table's logical records. Required on every commit when
     /// adaptiveMetadata is enabled; readers then treat it as the source of truth over the
     /// per-file-action `dataChange` flags.
     #[cfg(feature = "adaptive-metadata-in-dev")]
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
-    pub(crate) data_change: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data_change: Option<bool>,
     /// Identifies the latest manifest commit up to this version. Absent until the table's first
     /// manifest commit (adaptiveMetadata).
     #[cfg(feature = "adaptive-metadata-in-dev")]
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
-    pub(crate) last_manifest_commit: Option<LastManifestCommit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_manifest_commit: Option<LastManifestCommit>,
 }
 
 impl CommitInfo {
@@ -1001,21 +1003,21 @@ impl CommitInfo {
 ///
 /// [Iceberg V4 metadata RFC]: https://github.com/delta-io/delta/blob/master/protocol_rfcs/iceberg-v4-metadata.md#backreferences
 #[cfg(feature = "adaptive-metadata-in-dev")]
-#[derive(Debug, Clone, PartialEq, Eq, ToSchema, IntoStructData, Deserialize)]
-#[cfg_attr(test, derive(Serialize))]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, IntoStructData, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[internal_api]
 pub(crate) struct BackReference {
     /// Path to the leaf manifest containing this file, relative to the table root
     /// (e.g. `metadata/leaf-m1.parquet`). Resolved by joining the table location and this path
     /// with a `/` separator, so it must not start with `/`.
-    pub(crate) manifest: String,
+    pub manifest: String,
     /// Row position (0-indexed) of the file entry within the manifest.
-    pub(crate) pos: i32,
+    pub pos: i32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, ToSchema, IntoStructData, Deserialize)]
-#[cfg_attr(test, derive(Serialize, Default))]
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoStructData,
+)]
 #[serde(rename_all = "camelCase")]
 #[internal_api]
 pub(crate) struct Add {
@@ -1024,7 +1026,7 @@ pub(crate) struct Add {
     /// [RFC 2396 URI Generic Syntax], which needs to be decoded to get the data file path.
     ///
     /// [RFC 2396 URI Generic Syntax]: https://www.ietf.org/rfc/rfc2396.txt
-    pub(crate) path: String,
+    pub path: String,
 
     /// A map from partition column to value for this logical file. This map can contain null in
     /// the values meaning a partition is null. We drop those values from this map, due to the
@@ -1035,23 +1037,23 @@ pub(crate) struct Add {
     /// [`materialize`]: crate::engine_data::MapItem::materialize
     #[allow_null_container_values]
     #[serde(deserialize_with = "deserialize_partition_values")]
-    pub(crate) partition_values: HashMap<String, String>,
+    pub partition_values: HashMap<String, String>,
 
     /// The size of this data file in bytes
-    pub(crate) size: i64,
+    pub size: i64,
 
     /// The time this logical file was created, as milliseconds since the epoch.
-    pub(crate) modification_time: i64,
+    pub modification_time: i64,
 
     /// When `false` the logical file must already be present in the table or the records
     /// in the added file must be contained in one or more remove actions in the same version.
-    pub(crate) data_change: bool,
+    pub data_change: bool,
 
     /// Contains [statistics] (e.g., count, min/max values for columns) about the data in this
     /// logical file encoded as a JSON string.
     ///
     /// [statistics]: https://github.com/delta-io/delta/blob/master/PROTOCOL.md#Per-file-Statistics
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub stats: Option<String>,
 
     /// Map containing metadata about this logical file.
@@ -1060,25 +1062,25 @@ pub(crate) struct Add {
     /// drops null values when that attribute is present.
     ///
     /// [`MapItem::materialize`]: crate::engine_data::MapItem::materialize
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<HashMap<String, Option<String>>>,
 
     /// Information about deletion vector (DV) associated with this add action
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub deletion_vector: Option<DeletionVectorDescriptor>,
 
     /// Default generated Row ID of the first row in the file. The default generated Row IDs
     /// of the other rows in the file can be reconstructed by adding the physical index of the
     /// row within the file to the base Row ID.
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub base_row_id: Option<i64>,
 
     /// First commit version in which an add action with the same path was committed to the table.
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub default_row_commit_version: Option<i64>,
 
     /// The name of the clustering implementation
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub clustering_provider: Option<String>,
 
     /// Back reference into the adaptive metadata tree. Present only when this `add` re-adds a file
@@ -1223,33 +1225,33 @@ impl Add {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[internal_api]
-#[cfg_attr(test, derive(Serialize, Default), serde(rename_all = "camelCase"))]
 pub(crate) struct Remove {
     /// A relative path to a data file from the root of the table or an absolute path to a file
     /// that should be added to the table. The path is a URI as specified by
     /// [RFC 2396 URI Generic Syntax], which needs to be decoded to get the data file path.
     ///
     /// [RFC 2396 URI Generic Syntax]: https://www.ietf.org/rfc/rfc2396.txt
-    pub(crate) path: String,
+    pub path: String,
 
     /// The time this logical file was created, as milliseconds since the epoch.
     ///
     /// Must be null when adaptiveMetadata is enabled on the table since metadata cleanup
     /// uses tree reachability instead of timestamp-based expiration.
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
-    pub(crate) deletion_timestamp: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deletion_timestamp: Option<i64>,
 
     /// When `false` the logical file must already be present in the table or the records
     /// in the added file must be contained in one or more remove actions in the same version.
-    pub(crate) data_change: bool,
+    pub data_change: bool,
 
     /// When true, the fields `partition_values` and `size` are present
     ///
     /// Must be true when adaptiveMetadata is enabled on the table.
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
-    pub(crate) extended_file_metadata: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extended_file_metadata: Option<bool>,
 
     /// A map from partition column to value for this logical file. This map can contain null in
     /// the values meaning a partition is null. We drop those values from this map, due to the
@@ -1259,12 +1261,12 @@ pub(crate) struct Remove {
     ///
     /// [`materialize`]: crate::engine_data::EngineMap::materialize
     #[allow_null_container_values]
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
-    pub(crate) partition_values: Option<HashMap<String, String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub partition_values: Option<HashMap<String, String>>,
 
     /// The size of this data file in bytes
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
-    pub(crate) size: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size: Option<i64>,
 
     /// Contains [statistics] (e.g., count, min/max values for columns) about the data in this
     /// logical file encoded as a JSON string.
@@ -1272,39 +1274,39 @@ pub(crate) struct Remove {
     /// Must be set when adaptiveMetadata is enabled on the table.
     ///
     /// [statistics]: https://github.com/delta-io/delta/blob/master/PROTOCOL.md#Per-file-Statistics
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub stats: Option<String>,
 
     /// Map containing metadata about this logical file. Values can be null.
     #[allow_null_container_values]
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
-    pub(crate) tags: Option<HashMap<String, String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<HashMap<String, String>>,
 
     /// Information about deletion vector (DV) associated with this add action
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
-    pub(crate) deletion_vector: Option<DeletionVectorDescriptor>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deletion_vector: Option<DeletionVectorDescriptor>,
 
     /// Default generated Row ID of the first row in the file. The default generated Row IDs
     /// of the other rows in the file can be reconstructed by adding the physical index of the
     /// row within the file to the base Row ID
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
-    pub(crate) base_row_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub base_row_id: Option<i64>,
 
     /// First commit version in which an add action with the same path was committed to the table.
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
-    pub(crate) default_row_commit_version: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_row_commit_version: Option<i64>,
 
     /// Back reference into the adaptive metadata tree. Required when the file's entry lives in a
     /// leaf manifest; absent when the file has no leaf-manifest entry (it has no entry in the
     /// tree, or its entry is inline in the root manifest).
     #[cfg(feature = "adaptive-metadata-in-dev")]
-    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
-    pub(crate) back_reference: Option<BackReference>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub back_reference: Option<BackReference>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[internal_api]
-#[cfg_attr(test, derive(Serialize, Default), serde(rename_all = "camelCase"))]
 pub(crate) struct Cdc {
     /// A relative path to a change data file from the root of the table or an absolute path to a
     /// change data file that should be added to the table. The path is a URI as specified by
@@ -1395,10 +1397,11 @@ impl SetTransaction {
 ///
 /// Contains the path, size, and version of the root manifest file.
 #[cfg(feature = "adaptive-metadata-in-dev")]
-#[derive(Debug, Clone, PartialEq, Eq, ToSchema, IntoStructData, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoStructData,
+)]
 #[serde(rename_all = "camelCase")]
 #[internal_api]
-#[cfg_attr(test, derive(Default))]
 pub(crate) struct ContentRoot {
     /// Path to the root manifest file. It is absolute if it begins with an [RFC 3986] URI scheme
     /// (e.g. `s3://bucket/...`); otherwise it is relative and resolved against the table root by

@@ -40,8 +40,8 @@ if [ "${FLAVOR}" = "python" ]; then
   gmake -C python unit-test
 else
   # Run the integration tests
-  cargo build
-  cargo nextest r
-  cargo nextest r --features datafusion
+  cargo build --profile ci
+  cargo nextest r --profile ci
+  cargo nextest r --features datafusion --profile ci
 fi;
 

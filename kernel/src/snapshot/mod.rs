@@ -1142,6 +1142,7 @@ impl Snapshot {
     /// Operation, engine info, and data-change intent are required:
     ///
     /// ```compile_fail,E0061
+    /// # use buoyant_kernel as delta_kernel;
     /// # use delta_kernel::snapshot::SnapshotRef;
     /// # use delta_kernel::transaction::UpdateTableOperation;
     /// fn configure(snapshot: SnapshotRef) {
@@ -1151,6 +1152,7 @@ impl Snapshot {
     /// ```
     ///
     /// ```compile_fail,E0061
+    /// # use buoyant_kernel as delta_kernel;
     /// # use delta_kernel::snapshot::SnapshotRef;
     /// # use delta_kernel::transaction::UpdateTableOperation;
     /// fn configure(snapshot: SnapshotRef) {
@@ -1161,6 +1163,7 @@ impl Snapshot {
     /// Intent cannot be replaced with a setter:
     ///
     /// ```compile_fail,E0599
+    /// # use buoyant_kernel as delta_kernel;
     /// # use delta_kernel::transaction::Transaction;
     /// fn configure(transaction: Transaction) {
     ///     let _ = transaction.with_engine_info("my-app/1.0");
@@ -1168,6 +1171,7 @@ impl Snapshot {
     /// ```
     ///
     /// ```compile_fail,E0599
+    /// # use buoyant_kernel as delta_kernel;
     /// # use delta_kernel::transaction::UpdateTableTransactionBuilder;
     /// fn configure(builder: UpdateTableTransactionBuilder) {
     ///     let _ = builder.with_engine_info("my-app/1.0");
@@ -1175,6 +1179,7 @@ impl Snapshot {
     /// ```
     ///
     /// ```compile_fail,E0599
+    /// # use buoyant_kernel as delta_kernel;
     /// # use delta_kernel::transaction::UpdateTableTransactionBuilder;
     /// fn configure(builder: UpdateTableTransactionBuilder) {
     ///     let _ = builder.with_data_change(true);
@@ -1182,6 +1187,7 @@ impl Snapshot {
     /// ```
     ///
     /// ```compile_fail,E0599
+    /// # use buoyant_kernel as delta_kernel;
     /// # use delta_kernel::transaction::Transaction;
     /// fn configure(transaction: Transaction) {
     ///     let _ = transaction.with_data_change(true);

@@ -17,6 +17,7 @@
 //!
 //! # Example
 //! ```no_run
+//! # use buoyant_kernel as delta_kernel;
 //! use std::sync::Arc;
 //! use delta_kernel::commit_range::{CommitRange, DeltaAction};
 //! use delta_kernel::{Engine, KernelError, Snapshot};

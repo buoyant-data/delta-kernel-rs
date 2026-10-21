@@ -33,6 +33,7 @@
 //! 7. Pass the [`LastCheckpointHintStats`] to [`CheckpointWriter::finalize`]
 //!
 //! ```no_run
+//! # use buoyant_kernel as delta_kernel;
 //! # use std::sync::Arc;
 //! # use delta_kernel::ActionReconciliationIterator;
 //! # use delta_kernel::checkpoint::CheckpointWriter;

@@ -74,6 +74,7 @@ pub(crate) fn check_cancelled(token: Option<&CancellationTokenRef>) -> KernelRes
 /// [`AsAny::any_ref`] for why the borrow must go through `as_ref()` first.
 ///
 /// ```
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::cancellation::{CancellationToken, CancellationTokenRef, CancelledFuture};
 /// # use delta_kernel::AsAny;
 /// # use std::sync::Arc;

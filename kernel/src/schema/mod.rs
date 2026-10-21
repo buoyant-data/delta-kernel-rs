@@ -97,6 +97,7 @@ pub(crate) use delta_kernel_derive::lazy_schema_ref;
 /// # Examples
 ///
 /// ```
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::schema::{schema, DataType, StructField, StructType};
 /// let s = schema! {
 ///     not_null "id": LONG,
@@ -114,6 +115,7 @@ pub(crate) use delta_kernel_derive::lazy_schema_ref;
 /// Runtime values interpolate through the expression forms:
 ///
 /// ```
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::schema::{schema, DataType, StructField};
 /// let data_type = DataType::LONG;
 /// let first = StructField::not_null("y", DataType::INTEGER);
@@ -134,6 +136,7 @@ pub(crate) use delta_kernel_derive::lazy_schema_ref;
 /// rule:
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::schema::schema;
 /// const NAME: &str = "foo";
 /// let s = schema! {
@@ -1412,6 +1415,7 @@ impl<'a> IntoIterator for &'a StructType {
 /// # Examples
 ///
 /// ```
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::KernelError;
 /// use delta_kernel::schema::{StructType, StructField, DataType};
 ///
@@ -1485,6 +1489,7 @@ impl DoubleEndedIterator for StructFieldIntoIter {
 /// # Examples
 ///
 /// ```
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::KernelError;
 /// use delta_kernel::schema::{StructType, StructField, DataType};
 ///

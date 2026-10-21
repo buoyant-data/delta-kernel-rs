@@ -516,6 +516,7 @@ pub(crate) fn timestamp_to_version(
 ///
 /// # Examples
 /// ```ignore
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::snapshot::Snapshot;
 /// use test_utils::delta_kernel_default_engine::DefaultEngine;
 /// use delta_kernel::history_manager::{latest_version_as_of, HistoryCommitType};
@@ -557,6 +558,7 @@ pub fn latest_version_as_of(
 ///
 /// # Examples
 /// ```ignore
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::snapshot::Snapshot;
 /// use test_utils::delta_kernel_default_engine::DefaultEngine;
 /// use delta_kernel::history_manager::{first_version_after, HistoryCommitType};
@@ -614,6 +616,7 @@ pub fn first_version_after(
 ///
 /// # Examples
 /// ```ignore
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::snapshot::Snapshot;
 /// use test_utils::delta_kernel_default_engine::DefaultEngine;
 /// use delta_kernel::history_manager::timestamp_range_to_versions;

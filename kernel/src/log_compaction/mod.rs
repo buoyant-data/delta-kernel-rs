@@ -30,6 +30,7 @@
 //! ## Example
 //!
 //! ```no_run
+//! # use buoyant_kernel as delta_kernel;
 //! # use std::sync::Arc;
 //! # use delta_kernel::{ActionReconciliationIterator, LogCompactionWriter};
 //! # use delta_kernel::{Engine, Snapshot, KernelResult, KernelError, FileMeta};

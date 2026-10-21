@@ -230,6 +230,7 @@ pub struct CreateTable;
 /// Schema changes cannot be added to a built transaction:
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::transaction::Transaction;
 /// fn change_schema(txn: Transaction) {
 ///     let _ = txn.with_schema_changes(Vec::new());
@@ -239,6 +240,7 @@ pub struct CreateTable;
 /// The data-change flag cannot be overridden on a built transaction:
 ///
 /// ```compile_fail,E0599
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::transaction::Transaction;
 /// fn change_data_change<STATE>(txn: Transaction<STATE>) {
 ///     let _ = txn.with_data_change(false);
@@ -248,6 +250,7 @@ pub struct CreateTable;
 /// Blind-append intent cannot be added to a built transaction:
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::transaction::Transaction;
 /// fn change_blind_append(txn: Transaction) {
 ///     let _ = txn.with_blind_append();
@@ -257,6 +260,7 @@ pub struct CreateTable;
 /// The operation cannot be changed on a built transaction:
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::transaction::{Transaction, UpdateTableOperation};
 /// fn change_operation(txn: Transaction) {
 ///     let _ = txn.with_operation(UpdateTableOperation::Write);

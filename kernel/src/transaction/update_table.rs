@@ -208,6 +208,7 @@ impl Transaction<UpdateTable, Imperative> {
     /// # Example
     ///
     /// ```no_run
+    /// # use buoyant_kernel as delta_kernel;
     /// # use std::sync::Arc;
     /// # use delta_kernel::Engine;
     /// # use delta_kernel::snapshot::Snapshot;

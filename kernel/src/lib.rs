@@ -310,6 +310,7 @@ impl FileMeta {
 /// For example, the following code will compile:
 ///
 /// ```
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::AsAny;
 /// # use std::any::Any;
 /// # use std::sync::Arc;
@@ -356,6 +357,7 @@ pub trait AsAny: Any + Send + Sync {
     /// Obtains a `dyn Any` reference to the object:
     ///
     /// ```
+    /// # use buoyant_kernel as delta_kernel;
     /// # use delta_kernel::AsAny;
     /// # use std::any::Any;
     /// # use std::sync::Arc;
@@ -379,6 +381,7 @@ pub trait AsAny: Any + Send + Sync {
     /// Obtains an `Arc<dyn Any>` reference to the object:
     ///
     /// ```
+    /// # use buoyant_kernel as delta_kernel;
     /// # use delta_kernel::AsAny;
     /// # use std::any::Any;
     /// # use std::sync::Arc;
@@ -395,6 +398,7 @@ pub trait AsAny: Any + Send + Sync {
     /// Converts the object to `Box<dyn Any>`:
     ///
     /// ```
+    /// # use buoyant_kernel as delta_kernel;
     /// # use delta_kernel::AsAny;
     /// # use std::any::Any;
     /// # use std::sync::Arc;
@@ -840,6 +844,7 @@ pub trait ParquetHandler: AsAny {
     /// ## Metadata Column Examples
     ///
     /// ```rust,ignore
+    /// # use buoyant_kernel as delta_kernel;
     /// use delta_kernel::schema::{StructType, StructField, DataType, MetadataColumnSpec};
     ///
     /// // Example 1: Schema with row_index metadata column

@@ -63,6 +63,7 @@ pub trait SchemaTransform<'a> {
     /// Implementations can use [`crate::transforms::transform_output_type`] to define `Output`
     /// and `Residual` together. Or, define it manually like this:
     /// ```rust,no_run
+    /// # use buoyant_kernel as delta_kernel;
     /// # use std::borrow::Cow;
     /// # use delta_kernel::transforms::SchemaTransform;
     /// # use delta_kernel::transforms::Carrier;

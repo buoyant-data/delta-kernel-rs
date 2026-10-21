@@ -3,6 +3,7 @@
 /// Create-table transactions cannot remove files.
 ///
 /// ```compile_fail,E0599
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::engine_data::FilteredEngineData;
 /// use delta_kernel::transaction::{CreateTable, Transaction};
 ///
@@ -15,6 +16,7 @@ pub struct CreateRemove;
 /// An execution-mode bound does not provide the imperative commit API.
 ///
 /// ```compile_fail,E0599
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::transaction::{ExecutionMode, UpdateTable, Transaction};
 /// use delta_kernel::Engine;
 ///
@@ -27,6 +29,7 @@ pub struct GenericModeCommit;
 /// An execution-mode bound does not provide EngineData addition staging.
 ///
 /// ```compile_fail,E0599
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::transaction::{ExecutionMode, UpdateTable, Transaction};
 /// use delta_kernel::EngineData;
 ///
@@ -42,6 +45,7 @@ pub struct GenericModeAdd;
 /// An execution-mode bound does not provide EngineData removal staging.
 ///
 /// ```compile_fail,E0599
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::engine_data::FilteredEngineData;
 /// use delta_kernel::transaction::{ExecutionMode, UpdateTable, Transaction};
 ///
@@ -57,6 +61,7 @@ pub struct GenericModeRemove;
 /// Downstream types cannot implement execution modes.
 ///
 /// ```compile_fail,E0277
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::transaction::ExecutionMode;
 ///
 /// #[derive(Debug, Default)]
@@ -69,6 +74,7 @@ pub struct SealedExecutionMode;
 /// Shared configuration and write-state APIs are available for any execution mode.
 ///
 /// ```no_run
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::transaction::{UpdateTable, Transaction, ExecutionMode};
 /// use delta_kernel::KernelResult;
 ///
@@ -83,6 +89,7 @@ pub struct SharedConfiguration;
 /// The default transaction mode is imperative, with file staging and commit APIs.
 ///
 /// ```no_run
+/// # use buoyant_kernel as delta_kernel;
 /// use std::collections::HashMap;
 ///
 /// use delta_kernel::actions::deletion_vector::DeletionVectorDescriptor;

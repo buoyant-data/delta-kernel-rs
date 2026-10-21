@@ -7,6 +7,7 @@
 //! # Example
 //!
 //! ```rust,no_run
+//! # use buoyant_kernel as delta_kernel;
 //! use delta_kernel::transaction::create_table::create_table;
 //! use delta_kernel::schema::{StructType, StructField, DataType};
 //! use delta_kernel::committer::FileSystemCommitter;
@@ -55,6 +56,7 @@ use crate::transaction::{CreateTable, Transaction};
 /// # Example
 ///
 /// ```rust,no_run
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::transaction::create_table::create_table;
 /// use delta_kernel::schema::{StructType, StructField, DataType};
 /// use delta_kernel::committer::FileSystemCommitter;
@@ -92,6 +94,7 @@ pub type CreateTableTransaction = Transaction<CreateTable>;
 /// Engine info is required at construction:
 ///
 /// ```compile_fail,E0061
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::schema::SchemaRef;
 /// # use delta_kernel::transaction::create_table::create_table;
 /// fn configure(schema: SchemaRef) {
@@ -102,6 +105,7 @@ pub type CreateTableTransaction = Transaction<CreateTable>;
 /// Data-change intent is also required:
 ///
 /// ```compile_fail,E0061
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::schema::SchemaRef;
 /// # use delta_kernel::transaction::create_table::create_table;
 /// fn configure(schema: SchemaRef) {
@@ -110,6 +114,7 @@ pub type CreateTableTransaction = Transaction<CreateTable>;
 /// ```
 ///
 /// ```compile_fail,E0599
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::transaction::create_table::CreateTableTransactionBuilder;
 /// fn configure(builder: CreateTableTransactionBuilder) {
 ///     let _ = builder.with_data_change(true);
@@ -119,6 +124,7 @@ pub type CreateTableTransaction = Transaction<CreateTable>;
 /// # Example
 ///
 /// ```no_run
+/// # use buoyant_kernel as delta_kernel;
 /// use std::sync::Arc;
 /// use delta_kernel::transaction::create_table::create_table;
 /// use delta_kernel::schema::{DataType, StructField, StructType};

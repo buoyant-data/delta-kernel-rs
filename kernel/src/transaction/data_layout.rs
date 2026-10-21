@@ -68,6 +68,7 @@ impl DataLayout {
     /// Nested columns (construct the variant directly):
     ///
     /// ```ignore
+    /// # use buoyant_kernel as delta_kernel;
     /// use delta_kernel::expressions::column_name;
     /// let layout = DataLayout::Clustered {
     ///     columns: vec![column_name!("user.address.city")],

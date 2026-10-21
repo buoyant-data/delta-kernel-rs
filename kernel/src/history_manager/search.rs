@@ -86,6 +86,7 @@ pub(crate) enum SearchError<T: Error> {
 ///
 /// ## Finding the Least Upper Bound
 /// ```rust,ignore
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::history_manager::search::*;
 /// # use delta_kernel::KernelResult;
 /// let values = [10, 20, 30, 40, 50];
@@ -104,6 +105,7 @@ pub(crate) enum SearchError<T: Error> {
 ///
 /// ## Finding the Greatest Lower Bound
 /// ```rust,ignore
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::history_manager::search::*;
 /// # use delta_kernel::KernelResult;
 /// let values = [10, 20, 30, 40, 50];
@@ -121,6 +123,7 @@ pub(crate) enum SearchError<T: Error> {
 ///
 /// ## Handling Out of Range Values
 /// ```rust,ignore
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::history_manager::search::*;
 /// # use delta_kernel::KernelResult;
 /// let values = [10, 20, 30, 40, 50];
@@ -138,6 +141,7 @@ pub(crate) enum SearchError<T: Error> {
 ///
 /// ## Using a Fallible Key Function
 /// ```rust,ignore
+/// # use buoyant_kernel as delta_kernel;
 /// # use delta_kernel::history_manager::search::*;
 /// # use delta_kernel::KernelResult;
 /// // Using a fallible key function

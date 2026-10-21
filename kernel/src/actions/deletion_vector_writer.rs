@@ -21,6 +21,7 @@ use crate::{KernelError, KernelResult};
 /// # Examples
 ///
 /// ```rust
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::actions::deletion_vector_writer::DeletionVector;
 ///
 /// struct MyDeletionVector {
@@ -111,6 +112,7 @@ impl DeletionVectorWriteResult {
 /// # Examples
 ///
 /// ```rust
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::actions::deletion_vector_writer::KernelDeletionVector;
 ///
 /// let mut dv = KernelDeletionVector::new();
@@ -191,6 +193,7 @@ impl DeletionVector for KernelDeletionVector {
 /// # Examples
 ///
 /// ```rust
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::actions::deletion_vector_writer::{StreamingDeletionVectorWriter, KernelDeletionVector};
 ///
 /// let mut buffer = Vec::new();
@@ -253,6 +256,7 @@ impl<'a, W: Write> StreamingDeletionVectorWriter<'a, W> {
     /// # Examples
     ///
     /// ```rust,ignore
+    /// # use buoyant_kernel as delta_kernel;
     /// let mut dv = KernelDeletionVector::new();
     /// dv.add_deleted_row_indexes([1, 5, 10]);
     ///
@@ -349,6 +353,7 @@ impl<'a, W: Write> StreamingDeletionVectorWriter<'a, W> {
     /// # Examples
     ///
     /// ```rust,ignore
+    /// # use buoyant_kernel as delta_kernel;
     /// writer.write_deletion_vector(dv1)?;
     /// writer.write_deletion_vector(dv2)?;
     /// writer.finalize()?;

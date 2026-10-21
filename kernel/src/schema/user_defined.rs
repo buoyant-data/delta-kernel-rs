@@ -23,6 +23,7 @@ use crate::{KernelError, KernelResult};
 /// A nullable UDT field in a table's `schemaString`:
 ///
 /// ```rust
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::schema::{DataType, StructField, UserDefinedType};
 /// use serde_json::json;
 ///

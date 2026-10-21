@@ -38,6 +38,7 @@ pub trait TransactionType: private::Sealed {
 /// The operation cannot be changed on a builder:
 ///
 /// ```compile_fail,E0599
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::transaction::{TransactionBuilder, UpdateTableOperation};
 ///
 /// fn configure(builder: TransactionBuilder) {
@@ -48,6 +49,7 @@ pub trait TransactionType: private::Sealed {
 /// Update-table builders cannot configure new-table properties:
 ///
 /// ```compile_fail,E0599
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::transaction::{TransactionBuilder, UpdateTable};
 ///
 /// fn configure(builder: TransactionBuilder<UpdateTable>) {

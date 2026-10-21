@@ -14,6 +14,7 @@
 //! # Example: Implementing a Custom MetricsReporter
 //!
 //! ```
+//! # use buoyant_kernel as delta_kernel;
 //! use delta_kernel::metrics::{MetricsReporter, MetricEvent};
 //!
 //! #[derive(Debug)]
@@ -42,6 +43,7 @@
 //! If you need to send metrics to multiple destinations, you can create a composite reporter:
 //!
 //! ```
+//! # use buoyant_kernel as delta_kernel;
 //! use std::sync::Arc;
 //! use delta_kernel::metrics::{MetricsReporter, MetricEvent};
 //!
@@ -125,6 +127,7 @@ pub trait WithMetricsReporterLayer: Subscriber + for<'lookup> LookupSpan<'lookup
     /// # Example
     ///
     /// ```
+    /// # use buoyant_kernel as delta_kernel;
     /// use std::sync::Arc;
     /// use delta_kernel::metrics::{WithMetricsReporterLayer, LoggingMetricsReporter};
     /// use tracing_subscriber::prelude::*;

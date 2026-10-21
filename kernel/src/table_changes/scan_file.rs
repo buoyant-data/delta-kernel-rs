@@ -225,6 +225,7 @@ pub(crate) fn scan_metadata_to_scan_file(
 ///
 /// ## Example
 /// ```ignore
+/// # use buoyant_kernel as delta_kernel;
 /// let mut context = [my context];
 /// for res in scan_metadata { // scan metadata table_changes_scan.scan_metadata()
 ///     let (data, vector, remove_dv) = res?;

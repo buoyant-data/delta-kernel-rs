@@ -27,6 +27,7 @@ use delta_kernel_derive::pub_macro;
 /// fail to compile. Chained comparisons require separate comparisons inside `and`.
 ///
 /// ```
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::{expr, lit, Expression, Predicate};
 ///
 /// assert_eq!(
@@ -42,6 +43,7 @@ use delta_kernel_derive::pub_macro;
 /// ```
 ///
 /// ```
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::{col, expr, lit, Expression, Predicate};
 ///
 /// assert_eq!(
@@ -59,7 +61,7 @@ use delta_kernel_derive::pub_macro;
 /// Macro and crate imports can be aliased:
 ///
 /// ```
-/// use delta_kernel as kernel;
+/// use buoyant_kernel as kernel;
 /// use kernel::expressions::{expr as kernel_expr, null_lit, Expression};
 /// use kernel::schema::DataType;
 ///
@@ -74,21 +76,25 @@ use delta_kernel_derive::pub_macro;
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(a + b);
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(not(col("a"), col("b"), col("c")));
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(unknown_predicate(col("a")));
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::{expr, Expression, Predicate};
 /// trait CustomPredicate {
 ///     fn custom_predicate(self) -> Predicate;
@@ -100,16 +106,19 @@ use delta_kernel_derive::pub_macro;
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(not());
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(not(col("a"), col("b")));
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::{expr, Expression, Predicate};
 /// trait BinaryNot {
 ///     fn not(self, other: Expression) -> Predicate;
@@ -121,73 +130,87 @@ use delta_kernel_derive::pub_macro;
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(gt(col("a")));
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(is_null(col("a"), col("b")));
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(path());
 /// ```
 ///
 /// ```compile_fail,E0277
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(path("outer", 1));
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(col("a", "b"));
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// const COLUMN: &str = "a";
 /// let _ = expr!(col(COLUMN));
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(null(decimal(10, 2)));
 /// ```
 ///
 /// ```compile_fail,E0277
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(lit(1_u64));
 /// ```
 ///
 /// ```compile_fail,E0277
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(col("size") > 1_u64);
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(col("size") + 1);
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(col("size") = 1);
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(0 < col("size") < 100);
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let size = 1_i64;
 /// let _ = expr!(col("size") >= size);
 /// ```
 ///
 /// ```compile_fail
+/// # use buoyant_kernel as delta_kernel;
 /// use delta_kernel::expressions::expr;
 /// let _ = expr!(col("size") > unknown_predicate(col("other")));
 /// ```

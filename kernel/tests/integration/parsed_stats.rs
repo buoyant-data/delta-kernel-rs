@@ -1,5 +1,6 @@
 //! Integration tests for parsed-stats output.
 
+use buoyant_kernel as delta_kernel;
 use delta_kernel::actions::{MAX_VALUES, MIN_VALUES, NULL_COUNT, NUM_RECORDS, STATS_PARSED};
 use delta_kernel::arrow::array::{
     Array, BooleanArray, Decimal128Array, Float32Array, Float64Array, Int16Array, Int32Array,

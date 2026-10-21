@@ -14,6 +14,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use buoyant_kernel as delta_kernel;
 use delta_kernel::arrow::array::{Array, BooleanArray, Int64Array, RecordBatch, StructArray};
 use delta_kernel::arrow::compute::filter_record_batch;
 use delta_kernel::arrow::datatypes::Schema as ArrowSchema;

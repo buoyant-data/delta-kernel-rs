@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use buoyant_kernel as delta_kernel;
 use delta_kernel::schema::MetadataColumnSpec;
 use delta_kernel::snapshot::ChecksumWriteResult;
 use delta_kernel::{Engine, KernelResult, Snapshot};

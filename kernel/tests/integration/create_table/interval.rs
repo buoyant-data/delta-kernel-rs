@@ -1,5 +1,6 @@
 //! Interval-type integration tests for the CreateTable API.
 
+use buoyant_kernel as delta_kernel;
 use delta_kernel::committer::FileSystemCommitter;
 use delta_kernel::expressions::column_name;
 use delta_kernel::schema::{schema_ref, DataType};

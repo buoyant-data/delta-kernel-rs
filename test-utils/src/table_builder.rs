@@ -1735,11 +1735,11 @@ macro_rules! build_snapshot {
             }
             $crate::table_builder::VersionTarget::AtTimestamp(ts) => {
                 let latest = Snapshot::builder_for($table_root).build($engine).unwrap();
-                let commit = ::delta_kernel::history_manager::latest_version_as_of(
+                let commit = delta_kernel::history_manager::latest_version_as_of(
                     &latest,
                     $engine,
                     *ts,
-                    ::delta_kernel::history_manager::HistoryCommitType::Recreatable,
+                    delta_kernel::history_manager::HistoryCommitType::Recreatable,
                 )
                 .unwrap();
                 Snapshot::builder_for($table_root)

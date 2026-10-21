@@ -3,6 +3,7 @@ use std::error::Error as StdError;
 use std::io;
 use std::num::{IntErrorKind, ParseIntError};
 
+use buoyant_kernel as delta_kernel;
 use delta_kernel::{
     Error, KernelError, KernelResult, KernelResultIterator, KernelResultIteratorStatic, Result,
     ResultIterator, ResultIteratorStatic,

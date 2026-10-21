@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use buoyant_kernel as delta_kernel;
 use delta_kernel::arrow::array::{AsArray, Int32Array};
 use delta_kernel::arrow::compute::concat_batches;
 use delta_kernel::arrow::datatypes::{Int32Type, Int64Type};

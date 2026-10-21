@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use buoyant_kernel as delta_kernel;
 use delta_kernel::object_store::memory::InMemory;
 use delta_kernel::object_store::path::Path;
 use delta_kernel::object_store::ObjectStoreExt as _;

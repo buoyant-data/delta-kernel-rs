@@ -1,7 +1,7 @@
 [package]
-name = "delta_kernel"
-description = "Core crate providing a Delta/Deltalake implementation focused on interoperability with a wide range of query engines."
-documentation = "https://docs.rs/delta_kernel"
+name = "buoyant_kernel"
+description = "Buoyant Data distribution of delta-kernel"
+documentation = "https://docs.rs/buoyant_kernel"
 edition.workspace = true
 homepage.workspace = true
 license.workspace = true
@@ -37,7 +37,7 @@ pre-release-hook = [
 redundant_field_names = "allow"
 
 [dependencies]
-delta_kernel_derive = { path = "../derive-macros", version = "0.30.0" }
+delta_kernel_derive = { package = "buoyant_kernel_derive", path = "../derive-macros", version = "1" }
 bytes = "1.10"
 chrono = "0.4.41"
 chrono-tz = { version = "0.10.4", optional = true }
@@ -117,7 +117,6 @@ schema-diff = []
 
 # Declarative plan IR (experimental).
 declarative-plans = ["internal-api", "dep:prost", "dep:prost-build"]
-
 # Sources a prebuilt `protoc` for the codegen `declarative-plans` runs, so the build needs no
 # system protobuf install. Leave it off to pass `protoc` through the `PROTOC` env var instead;
 # a build that pins a hermetic toolchain cannot use a downloaded binary.
@@ -153,7 +152,7 @@ prost-build = { version = "0.13", optional = true }
 protoc-bin-vendored = { version = "3.2", optional = true }
 
 [dev-dependencies]
-delta_kernel = { path = ".", features = ["internal-api", "test-utils"] }
+delta_kernel = { package = "buoyant_kernel", path = ".", features = ["internal-api", "test-utils"] }
 # NOTE: test_utils forcibly pulls the default engine and arrow-59. By default it ALSO pulls
 # arrow-60, which takes precedence and would make it impossible to test against arrow-59.
 test_utils = { path = "../test-utils", default-features = false }

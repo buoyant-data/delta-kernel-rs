@@ -455,7 +455,7 @@ pub const fn __require_valid_simple_column_segment(s: &str) -> Option<&str> {
 macro_rules! column_name {
     ( $($segments:tt)+ ) => {{
         const SEGMENTS: &[&str] =
-            $crate::delta_kernel_derive::column_name_segments!($($segments)+);
+            $crate::delta_kernel_derive::column_name_segments!(@kernel $crate; $($segments)+);
         $crate::expressions::ColumnName::new(SEGMENTS.iter().copied())
     }};
 }

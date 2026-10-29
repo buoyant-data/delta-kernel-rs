@@ -69,8 +69,45 @@ pub fn column_name_segments(input: proc_macro::TokenStream) -> proc_macro::Token
         .into()
 }
 
+/// Splits the leading `@kernel <path>;` prefix that `column_name!` supplies (its `$crate`). The
+/// prefix carries the kernel path into the generated validator call, so it resolves from any
+/// caller regardless of the name the caller imported the kernel under.
+fn split_kernel_prefix(input: TokenStream) -> Result<(TokenStream, TokenStream), Error> {
+    let mut iter = input.into_iter().peekable();
+    let is_at = matches!(iter.peek(), Some(proc_macro2::TokenTree::Punct(p)) if p.as_char() == '@');
+    if !is_at {
+        return Err(Error::new(
+            proc_macro2::Span::call_site(),
+            "column_name_segments! requires a leading `@kernel <path>;` prefix",
+        ));
+    }
+    iter.next(); // '@'
+    let kw = iter.next();
+    if !matches!(&kw, Some(proc_macro2::TokenTree::Ident(i)) if i == "kernel") {
+        return Err(Error::new(
+            proc_macro2::Span::call_site(),
+            "expected `kernel` after `@` in column_name_segments!",
+        ));
+    }
+    let mut path = TokenStream::new();
+    loop {
+        match iter.next() {
+            Some(proc_macro2::TokenTree::Punct(p)) if p.as_char() == ';' => break,
+            Some(t) => path.extend(std::iter::once(t)),
+            None => {
+                return Err(Error::new(
+                    proc_macro2::Span::call_site(),
+                    "missing `;` after the kernel path in column_name_segments!",
+                ))
+            }
+        }
+    }
+    Ok((path, iter.collect()))
+}
+
 fn column_name_segments_impl(input: TokenStream) -> Result<TokenStream, Error> {
     // `column_name!` requires at least one argument, so no empty check is needed here.
+    let (kernel, input) = split_kernel_prefix(input)?;
     let mut emitted = Vec::new();
     for expr in Punctuated::<Expr, Token![,]>::parse_terminated.parse2(input)? {
         // Fragment-forwarding macros (col!, column_name!, joined_column_name!, ...) capture with
@@ -95,7 +132,7 @@ fn column_name_segments_impl(input: TokenStream) -> Result<TokenStream, Error> {
             // A string constant's value isn't visible until const-eval (after this macro expands),
             // so wrap the value in a const fn validator with failure as a compile-time panic.
             _ => emitted.push(quote_spanned! { expr.span() =>
-                match delta_kernel::expressions::__require_valid_simple_column_segment(#expr) {
+                match #kernel::expressions::__require_valid_simple_column_segment(#expr) {
                     Some(segment) => segment,
                     None => panic!("String constants passed to column_name! must be simple names \
                                     matching [a-zA-Z0-9_]+; use a string literal for dot-separated \

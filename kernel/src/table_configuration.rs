@@ -28,6 +28,8 @@ use crate::schema::{
 };
 #[cfg(feature = "geo-type-in-dev")]
 use crate::table_features::validate_geospatial_feature_support;
+#[cfg(feature = "nanosecond-timestamps")]
+use crate::table_features::validate_timestamp_nanos_feature_support;
 use crate::table_features::{
     check_reader_version_range, column_mapping_mode, extract_enabled_reader_features,
     get_any_level_column_physical_name, validate_iceberg_compat_if_needed,
@@ -446,6 +448,8 @@ impl TableConfiguration {
             &V3_VALIDATOR,
             IcebergCompatValidationContext::TableConfiguration,
         )?;
+        #[cfg(feature = "nanosecond-timestamps")]
+        validate_timestamp_nanos_feature_support(&table_config)?;
 
         Ok(table_config)
     }
@@ -1279,13 +1283,14 @@ impl TableConfiguration {
 mod test {
 
     use std::collections::HashMap;
+    use std::sync::Arc;
 
     use rstest::rstest;
 
     use super::{InCommitTimestampEnablement, StatsOutputSchemas, TableConfiguration};
     use crate::actions::{Metadata, Protocol, MIN_VALUES};
     use crate::schema::{
-        column_name, schema, schema_ref, ColumnName, DataType, SchemaRef, StructField,
+        column_name, schema, schema_ref, ColumnName, DataType, SchemaRef, StructField, StructType,
     };
     use crate::table_features::{
         ColumnMappingMode, FeatureType, Operation, TableFeature, TABLE_FEATURES_MIN_READER_VERSION,
@@ -1827,6 +1832,60 @@ mod test {
             table_config.column_mapping_mode()
         );
         assert_eq!(new_table_config.table_root(), table_config.table_root());
+    }
+
+    #[cfg(feature = "nanosecond-timestamps")]
+    #[rstest::rstest]
+    #[case::nanos(DataType::TIMESTAMP_NANOS)]
+    #[case::nanos_ntz(DataType::TIMESTAMP_NANOS_NTZ)]
+    fn test_timestamp_nanos_validation_integration(#[case] ts_type: DataType) {
+        let schema = Arc::new(StructType::new_unchecked([StructField::nullable(
+            "ts", ts_type,
+        )]));
+        let metadata = Metadata::try_new(None, None, schema, vec![], 0, HashMap::new()).unwrap();
+
+        let protocol_without_timestamp_nanos_features = Protocol::try_new(
+            3,
+            7,
+            Some::<Vec<String>>(vec![]),
+            Some::<Vec<String>>(vec![]),
+        )
+        .unwrap();
+
+        let protocol_with_timestamp_nanos_features = Protocol::try_new(
+            3,
+            7,
+            Some([
+                TableFeature::TimestampNanos,
+                TableFeature::TimestampWithoutTimezone,
+            ]),
+            Some([
+                TableFeature::TimestampNanos,
+                TableFeature::TimestampWithoutTimezone,
+            ]),
+        )
+        .unwrap();
+
+        let table_root = url::Url::try_from("file:///").unwrap();
+
+        let result = TableConfiguration::try_new(
+            metadata.clone(),
+            protocol_without_timestamp_nanos_features,
+            table_root.clone(),
+            0,
+        );
+        assert_result_error_with_message(result, "Unsupported: Table contains TIMESTAMP_NANOS or TIMESTAMP_NANOS_NTZ columns but does not have the required 'timestampNanos' and 'timestampNtz' features in reader and writer features");
+
+        let result = TableConfiguration::try_new(
+            metadata,
+            protocol_with_timestamp_nanos_features,
+            table_root,
+            0,
+        );
+        assert!(
+            result.is_ok(),
+            "Should succeed when nanosecond timestamps are used with required features"
+        );
     }
 
     #[test]

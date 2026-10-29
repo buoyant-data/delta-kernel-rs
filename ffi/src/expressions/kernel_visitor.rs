@@ -377,6 +377,27 @@ pub extern "C" fn visit_expression_literal_timestamp(
     wrap_expression(state, lit(Scalar::Timestamp(value)))
 }
 
+#[cfg(feature = "nanosecond-timestamps")]
+/// visit a timestamp literal expression 'value' (i64 representing nanoseconds since unix epoch)
+#[no_mangle]
+pub extern "C" fn visit_expression_literal_timestamp_nanos(
+    state: &mut KernelExpressionVisitorState,
+    value: i64,
+) -> usize {
+    wrap_expression(state, Expression::literal(Scalar::TimestampNanos(value)))
+}
+
+#[cfg(feature = "nanosecond-timestamps")]
+/// visit a timestamp literal expression 'value' (i64 representing nanoseconds since
+/// unix epoch, with no timezone)
+#[no_mangle]
+pub extern "C" fn visit_expression_literal_timestamp_nanos_ntz(
+    state: &mut KernelExpressionVisitorState,
+    value: i64,
+) -> usize {
+    wrap_expression(state, Expression::literal(Scalar::TimestampNanosNtz(value)))
+}
+
 /// visit a timestamp_ntz literal expression 'value' (i64 representing microseconds since unix
 /// epoch)
 #[no_mangle]
@@ -496,6 +517,12 @@ pub(crate) enum NullTypeTag {
     IntervalYearMonth = 13,
     /// Null of type `interval day to second` (signed microsecond duration).
     IntervalDayTime = 14,
+    // Deliberately not feature gated, so timestamp_nanos tag numbers are reserved even
+    // when the feature is disabled.
+    /// EXPERIMENTAL. Null of type `timestamp_nanos` (nanoseconds since epoch, UTC-adjusted).
+    TimestampNanos = 15,
+    /// EXPERIMENTAL. Null of type `timestamp_nanos_ntz` (nanoseconds since epoch, no timezone).
+    TimestampNanosNtz = 16,
     /// Sentinel for non-primitive null types (struct, array, map, variant) and void. Emitted by
     /// the kernel-to-engine visitor when the null's type cannot be reconstructed from a compact
     /// tag. Engines that receive this tag should use opaque expressions or a schema visitor to
@@ -526,6 +553,8 @@ impl TryFrom<u8> for NullTypeTag {
             12 => Ok(Self::Decimal),
             13 => Ok(Self::IntervalYearMonth),
             14 => Ok(Self::IntervalDayTime),
+            15 => Ok(Self::TimestampNanos),
+            16 => Ok(Self::TimestampNanosNtz),
             255 => Ok(Self::NonPrimitive),
             other => Err(delta_kernel::KernelError::generic(format!(
                 "Unrecognized null type tag: {other}"
@@ -552,6 +581,10 @@ impl NullTypeTag {
                 PrimitiveType::String => (Self::String, 0, 0),
                 PrimitiveType::Binary => (Self::Binary, 0, 0),
                 PrimitiveType::Date => (Self::Date, 0, 0),
+                #[cfg(feature = "nanosecond-timestamps")]
+                PrimitiveType::TimestampNanos => (Self::TimestampNanos, 0, 0),
+                #[cfg(feature = "nanosecond-timestamps")]
+                PrimitiveType::TimestampNanosNtz => (Self::TimestampNanosNtz, 0, 0),
                 PrimitiveType::Timestamp => (Self::Timestamp, 0, 0),
                 PrimitiveType::TimestampNtz => (Self::TimestampNtz, 0, 0),
                 PrimitiveType::IntervalYearMonth => (Self::IntervalYearMonth, 0, 0),
@@ -595,6 +628,18 @@ impl NullTypeTag {
             Self::String => Ok(DataType::STRING),
             Self::Binary => Ok(DataType::BINARY),
             Self::Date => Ok(DataType::DATE),
+            #[cfg(not(feature = "nanosecond-timestamps"))]
+            Self::TimestampNanos => Err(delta_kernel::Error::generic(
+                "`nanosecond-timestamps` Cargo feature not enabled",
+            )),
+            #[cfg(feature = "nanosecond-timestamps")]
+            Self::TimestampNanos => Ok(DataType::TIMESTAMP_NANOS),
+            #[cfg(not(feature = "nanosecond-timestamps"))]
+            Self::TimestampNanosNtz => Err(delta_kernel::Error::generic(
+                "`nanosecond-timestamps` Cargo feature not enabled",
+            )),
+            #[cfg(feature = "nanosecond-timestamps")]
+            Self::TimestampNanosNtz => Ok(DataType::TIMESTAMP_NANOS_NTZ),
             Self::Timestamp => Ok(DataType::TIMESTAMP),
             Self::TimestampNtz => Ok(DataType::TIMESTAMP_NTZ),
             Self::IntervalYearMonth => Ok(DataType::INTERVAL_YEAR_MONTH),
@@ -1062,6 +1107,8 @@ mod tests {
     #[case(12, NullTypeTag::Decimal)]
     #[case(13, NullTypeTag::IntervalYearMonth)]
     #[case(14, NullTypeTag::IntervalDayTime)]
+    #[case(15, NullTypeTag::TimestampNanos)]
+    #[case(16, NullTypeTag::TimestampNanosNtz)]
     #[case(255, NullTypeTag::NonPrimitive)]
     fn try_from_u8_valid(#[case] value: u8, #[case] expected: NullTypeTag) {
         assert_eq!(NullTypeTag::try_from(value).unwrap(), expected);

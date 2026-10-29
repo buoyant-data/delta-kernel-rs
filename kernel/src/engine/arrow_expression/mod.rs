@@ -105,6 +105,11 @@ impl Scalar {
             }
             IntervalYearMonth(val) => append_val_n_as!(array::Int32Builder, *val),
             IntervalDayTime(val) => append_val_n_as!(array::Int64Builder, *val),
+            #[cfg(feature = "nanosecond-timestamps")]
+            TimestampNanos(val) | TimestampNanosNtz(val) => {
+                // timezone was already set at builder construction time
+                append_val_n_as!(array::TimestampNanosecondBuilder, *val)
+            }
             Date(val) => append_val_n_as!(array::Date32Builder, *val),
             Binary(val) => append_val_as!(array::BinaryBuilder, val),
             // precision and scale were already set at builder construction time
@@ -186,6 +191,10 @@ impl Scalar {
             DataType::BOOLEAN => append_nulls_as!(array::BooleanBuilder),
             DataType::TIMESTAMP | DataType::TIMESTAMP_NTZ => {
                 append_nulls_as!(array::TimestampMicrosecondBuilder)
+            }
+            #[cfg(feature = "nanosecond-timestamps")]
+            DataType::TIMESTAMP_NANOS | DataType::TIMESTAMP_NANOS_NTZ => {
+                append_nulls_as!(array::TimestampNanosecondBuilder)
             }
             DataType::DATE => append_nulls_as!(array::Date32Builder),
             DataType::BINARY => append_nulls_as!(array::BinaryBuilder),
@@ -515,6 +524,16 @@ fn primitive_types_compatible(expected: &PrimitiveType, data_type: &ArrowDataTyp
         (PrimitiveType::Void, ArrowDataType::Null) => true,
         (PrimitiveType::IntervalYearMonth, ArrowDataType::Int32 | ArrowDataType::UInt32) => true,
         (PrimitiveType::IntervalDayTime, ArrowDataType::Int64 | ArrowDataType::UInt64) => true,
+        #[cfg(feature = "nanosecond-timestamps")]
+        (
+            PrimitiveType::TimestampNanos,
+            ArrowDataType::Timestamp(TimeUnit::Nanosecond, Some(timezone)),
+        ) => timezone.eq_ignore_ascii_case("utc"),
+        #[cfg(feature = "nanosecond-timestamps")]
+        (
+            PrimitiveType::TimestampNanosNtz,
+            ArrowDataType::Timestamp(TimeUnit::Nanosecond, None),
+        ) => true,
         _ => false,
     }
 }

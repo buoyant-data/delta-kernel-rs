@@ -15,6 +15,12 @@ pub(crate) use column_mapping::{
 use delta_kernel_derive::internal_api;
 #[cfg(feature = "geo-type-in-dev")]
 pub(crate) use geospatial::validate_geospatial_feature_support;
+#[cfg(feature = "nanosecond-timestamps")]
+pub(crate) use timestamp_nanos::{
+    schema_contains_timestamp_nanos, validate_timestamp_nanos_feature_support,
+};
+#[cfg(feature = "nanosecond-timestamps")]
+mod timestamp_nanos;
 pub(crate) use iceberg_compat::v2::V2_VALIDATOR;
 pub(crate) use iceberg_compat::v3::V3_VALIDATOR;
 pub(crate) use iceberg_compat::{
@@ -161,6 +167,11 @@ pub(crate) enum TableFeature {
     #[strum(to_string = "timestampNtz", serialize = "timestampWithoutTimezone")]
     #[serde(rename = "timestampNtz", alias = "timestampWithoutTimezone")]
     TimestampWithoutTimezone,
+    /// Nanosecond resolution timestamps
+    #[cfg(feature = "nanosecond-timestamps")]
+    #[strum(serialize = "timestampNanos")]
+    #[serde(rename = "timestampNanos")]
+    TimestampNanos,
     // Allow columns to change type
     TypeWidening,
     #[strum(serialize = "typeWidening-preview")]
@@ -603,6 +614,17 @@ static TIMESTAMP_WITHOUT_TIMEZONE_INFO: FeatureInfo = FeatureInfo {
     enablement_check: EnablementCheck::AlwaysIfSupported,
 };
 
+#[cfg(feature = "nanosecond-timestamps")]
+static TIMESTAMP_NANOSECOND_INFO: FeatureInfo = FeatureInfo {
+    feature_type: FeatureType::ReaderWriter,
+    min_legacy_version: None,
+    feature_requirements: &[FeatureRequirement::Enabled(
+        TableFeature::TimestampWithoutTimezone,
+    )],
+    kernel_support: KernelSupport::Supported,
+    enablement_check: EnablementCheck::AlwaysIfSupported,
+};
+
 static TYPE_WIDENING_INFO: FeatureInfo = FeatureInfo {
     feature_type: FeatureType::ReaderWriter,
     min_legacy_version: None,
@@ -758,6 +780,8 @@ impl TableFeature {
             | TableFeature::VariantShreddingPreview
             | TableFeature::AdaptiveMetadataPreview
             | TableFeature::GeospatialType => FeatureType::ReaderWriter,
+            #[cfg(feature = "nanosecond-timestamps")]
+            TableFeature::TimestampNanos => FeatureType::ReaderWriter,
             TableFeature::AppendOnly
             | TableFeature::DomainMetadata
             | TableFeature::Invariants
@@ -818,6 +842,8 @@ impl TableFeature {
             TableFeature::ColumnMapping => &COLUMN_MAPPING_INFO,
             TableFeature::DeletionVectors => &DELETION_VECTORS_INFO,
             TableFeature::TimestampWithoutTimezone => &TIMESTAMP_WITHOUT_TIMEZONE_INFO,
+            #[cfg(feature = "nanosecond-timestamps")]
+            TableFeature::TimestampNanos => &TIMESTAMP_NANOSECOND_INFO,
             TableFeature::TypeWidening => &TYPE_WIDENING_INFO,
             TableFeature::TypeWideningPreview => &TYPE_WIDENING_PREVIEW_INFO,
             TableFeature::V2Checkpoint => &V2_CHECKPOINT_INFO,
@@ -1188,6 +1214,8 @@ mod tests {
                 TableFeature::ColumnMapping => "columnMapping",
                 TableFeature::DeletionVectors => "deletionVectors",
                 TableFeature::TimestampWithoutTimezone => "timestampNtz",
+                #[cfg(feature = "nanosecond-timestamps")]
+                TableFeature::TimestampNanos => "timestampNanos",
                 TableFeature::TypeWidening => "typeWidening",
                 TableFeature::TypeWideningPreview => "typeWidening-preview",
                 TableFeature::V2Checkpoint => "v2Checkpoint",

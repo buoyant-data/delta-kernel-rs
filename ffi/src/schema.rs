@@ -179,7 +179,7 @@ pub struct EngineSchemaVisitor {
         metadata: &CMetadataMap,
     ),
 
-    /// Visit a `timestamp` belonging to the list identified by `sibling_list_id`.
+    /// Visit a microsecond `timestamp` belonging to the list identified by `sibling_list_id`.
     pub visit_timestamp: extern "C" fn(
         data: *mut c_void,
         sibling_list_id: usize,
@@ -188,7 +188,8 @@ pub struct EngineSchemaVisitor {
         metadata: &CMetadataMap,
     ),
 
-    /// Visit a `timestamp` with no timezone belonging to the list identified by `sibling_list_id`.
+    /// Visit a microsecond `timestamp` with no timezone belonging to the list identified by
+    /// `sibling_list_id`.
     pub visit_timestamp_ntz: extern "C" fn(
         data: *mut c_void,
         sibling_list_id: usize,
@@ -290,6 +291,27 @@ pub struct EngineSchemaVisitor {
         metadata: &CMetadataMap,
         child_list_id: usize,
         annotation: FfiNullableStringMap,
+    ),
+
+    #[cfg(feature = "nanosecond-timestamps")]
+    /// Visit a nanosecond `timestamp` belonging to the list identified by `sibling_list_id`.
+    pub visit_timestamp_nanos: extern "C" fn(
+        data: *mut c_void,
+        sibling_list_id: usize,
+        name: KernelStringSlice,
+        is_nullable: bool,
+        metadata: &CStringMap,
+    ),
+
+    #[cfg(feature = "nanosecond-timestamps")]
+    /// Visit a nanosecond `timestamp` with no timezone belonging to the list identified
+    /// by `sibling_list_id`.
+    pub visit_timestamp_nanos_ntz: extern "C" fn(
+        data: *mut c_void,
+        sibling_list_id: usize,
+        name: KernelStringSlice,
+        is_nullable: bool,
+        metadata: &CStringMap,
     ),
 }
 
@@ -456,6 +478,10 @@ fn visit_schema_impl(schema: &StructType, visitor: &mut EngineSchemaVisitor) -> 
             &DataType::TIMESTAMP_NTZ => call!(visit_timestamp_ntz),
             &DataType::INTERVAL_YEAR_MONTH => call!(visit_interval_year_month),
             &DataType::INTERVAL_DAY_TIME => call!(visit_interval_day_time),
+            #[cfg(feature = "nanosecond-timestamps")]
+            &DataType::TIMESTAMP_NANOS => call!(visit_timestamp_nanos),
+            #[cfg(feature = "nanosecond-timestamps")]
+            &DataType::TIMESTAMP_NANOS_NTZ => call!(visit_timestamp_nanos_ntz),
             &DataType::VOID => call!(visit_void),
             #[cfg(feature = "geo-type-in-dev")]
             DataType::Primitive(PrimitiveType::Geometry(geometry)) => {

@@ -53,6 +53,8 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::sync::Arc;
 
+#[cfg(feature = "nanosecond-timestamps")]
+use delta_kernel::arrow::array::TimestampNanosecondArray;
 use delta_kernel::arrow::array::{
     Array, ArrayRef, BinaryArray, BooleanArray, Date32Array, Decimal128Array, Float32Array,
     Float64Array, Int16Array, Int32Array, Int64Array, Int8Array, RecordBatch, StringArray,
@@ -1577,6 +1579,17 @@ fn generate_column(arrow_type: &ArrowDataType, rows: usize, base: i32) -> ArrayR
                 None => Arc::new(array),
             }
         }
+        #[cfg(feature = "nanosecond-timestamps")]
+        ArrowDataType::Timestamp(TimeUnit::Nanosecond, tz) => {
+            let values: Vec<i64> = (0..rows)
+                .map(|i| (18 + base + i as i32) as i64 * 86_400_000_000_000)
+                .collect();
+            let array = TimestampNanosecondArray::from(values);
+            match tz {
+                Some(tz) => Arc::new(array.with_timezone(tz.as_ref())),
+                None => Arc::new(array),
+            }
+        }
         ArrowDataType::Decimal128(precision, scale) => {
             let scale_factor = 10i128.pow(*scale as u32);
             let values: Vec<i128> = (0..rows)
@@ -1855,6 +1868,16 @@ fn scalar_for_type(data_type: &DataType, seed: usize) -> Scalar {
                 // Intervals are physical integers: months (year-month) / microseconds (day-time).
                 PrimitiveType::IntervalYearMonth => Scalar::IntervalYearMonth((seed % 100) as i32),
                 PrimitiveType::IntervalDayTime => Scalar::IntervalDayTime((seed * 1000) as i64),
+            #[cfg(feature = "nanosecond-timestamps")]
+            PrimitiveType::TimestampNanos => {
+                // Nanoseconds since epoch (UTC)
+                Scalar::TimestampNanos((18000 + seed as i64) * 86_400_000_000_000)
+            }
+            #[cfg(feature = "nanosecond-timestamps")]
+            PrimitiveType::TimestampNanosNtz => {
+                // Nanoseconds since epoch (no timezone)
+                Scalar::TimestampNanosNtz((18000 + seed as i64) * 86_400_000_000_000)
+            }
                 other => panic!("{other:?} is not a valid partition column type"),
             }
         }

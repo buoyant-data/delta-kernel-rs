@@ -441,6 +441,28 @@ fn test_timestamp_stats_enabled() {
     );
 }
 
+#[cfg(feature = "nanosecond-timestamps")]
+#[test]
+fn test_nanos_max_stat_adjustment_keeps_file_with_truncated_max() {
+    // The stats writer stores a nanosecond max rounded down to milliseconds, so the actual max is
+    // in `[stored, stored + 999_999 ns]`. A predicate `max >= threshold` must keep the file whenever
+    // its actual max reaches the threshold, even though the stored bound sits below it. The
+    // adjustment widens the threshold by the gap, so the stored bound is compared against a value
+    // it can still reach.
+    let actual_max = 1_634_567_890_123_456_789i64; // sub-millisecond, so truncation applies
+    let stored_max = actual_max - actual_max.rem_euclid(1_000_000);
+    let threshold = actual_max; // predicate: max >= actual_max, which this file satisfies
+    let Scalar::TimestampNanos(adjusted) =
+        adjust_scalar_for_max_stat_truncation(&Scalar::TimestampNanos(threshold))
+    else {
+        panic!("expected TimestampNanos");
+    };
+    assert!(
+        stored_max >= adjusted,
+        "file with actual max {actual_max} (stored {stored_max}) would be pruned by threshold {adjusted}"
+    );
+}
+
 #[test]
 fn test_adjust_scalar_for_max_stat_truncation() {
     // Timestamp: subtracts 999us

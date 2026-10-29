@@ -966,11 +966,12 @@ impl PrimitiveType {
                     .signed_duration_since(DateTime::UNIX_EPOCH)
                     .num_nanoseconds()
                     .ok_or(self.parse_error(raw))?;
-                match self {
-                    TimestampNanos => Ok(Scalar::TimestampNanos(nanos)),
-                    TimestampNanosNtz => Ok(Scalar::TimestampNanosNtz(nanos)),
-                    _ => unreachable!(),
-                }
+                let scalar = if with_timezone {
+                    Scalar::TimestampNanos(nanos)
+                } else {
+                    Scalar::TimestampNanosNtz(nanos)
+                };
+                Ok(scalar)
             }
             // Kernel does not support parsing text into Geometry/Geography types yet.
             #[cfg(feature = "geo-type-in-dev")]

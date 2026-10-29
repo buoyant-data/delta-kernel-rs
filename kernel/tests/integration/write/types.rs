@@ -3,6 +3,8 @@
 use std::sync::Arc;
 
 use buoyant_kernel as delta_kernel;
+#[cfg(feature = "nanosecond-timestamps")]
+use delta_kernel::arrow::array::TimestampNanosecondArray;
 use delta_kernel::arrow::array::{
     new_null_array, ArrayRef, BinaryArray, Int32Array, StructArray, TimestampMicrosecondArray,
 };
@@ -67,9 +69,103 @@ async fn test_append_timestamp_ntz() -> Result<(), Box<dyn std::error::Error>> {
         -62135596800000000i64, // 0001-01-01T00:00:00.000000 (near min valid timestamp)
     ];
 
+    test_append_timestamp(
+        DataType::TIMESTAMP_NTZ,
+        "ts_ntz",
+        "test_table_timestamp_ntz",
+        vec!["timestampNtz"],
+        Arc::new(TimestampMicrosecondArray::from(timestamp_values)),
+        ("0001-01-01T00:00:00.000", "9999-12-31T23:59:59.999"),
+    )
+    .await
+}
+
+#[cfg(feature = "nanosecond-timestamps")]
+#[tokio::test]
+async fn test_append_timestamp_nanos() -> Result<(), Box<dyn std::error::Error>> {
+    let timestamp_values = vec![
+        0i64,                   // Unix epoch (1970-01-01T00:00:00.000000000)
+        1634567890123456789i64, // 2021-10-18T12:31:30.123456789
+        1634567950987654321i64, // 2021-10-18T12:32:30.987654321
+        1672531200000000000i64, // 2023-01-01T00:00:00.000000000
+        i64::MAX,               // 2262-04-11T23:47:16.854775807
+        i64::MIN,               // 1677-09-21T00:12:43.145224192
+    ];
+
+    test_append_timestamp(
+        DataType::TIMESTAMP_NANOS,
+        "ts_nanos",
+        "test_table_timestamp_nanos",
+        vec!["timestampNanos", "timestampNtz"],
+        Arc::new(TimestampNanosecondArray::from(timestamp_values).with_timezone("UTC")),
+        // Stats are written at millisecond precision: nanoseconds are truncated.
+        ("1677-09-21T00:12:43.145Z", "2262-04-11T23:47:16.854Z"),
+    )
+    .await
+}
+
+#[cfg(feature = "nanosecond-timestamps")]
+#[tokio::test]
+async fn test_append_timestamp_nanos_ntz() -> Result<(), Box<dyn std::error::Error>> {
+    let timestamp_values = vec![
+        0i64,                   // Unix epoch (1970-01-01T00:00:00.000000000)
+        1634567890123456789i64, // 2021-10-18T12:31:30.123456789
+        1634567950987654321i64, // 2021-10-18T12:32:30.987654321
+        1672531200000000000i64, // 2023-01-01T00:00:00.000000000
+        i64::MAX,               // 2262-04-11T23:47:16.854775807
+        i64::MIN,               // 1677-09-21T00:12:43.145224192
+    ];
+
+    test_append_timestamp(
+        DataType::TIMESTAMP_NANOS_NTZ,
+        "ts_nanos_ntz",
+        "test_table_timestamp_nanos_ntz",
+        vec!["timestampNanos", "timestampNtz"],
+        Arc::new(TimestampNanosecondArray::from(timestamp_values)),
+        ("1677-09-21T00:12:43.145", "2262-04-11T23:47:16.854"),
+    )
+    .await
+}
+
+async fn test_append_timestamp(
+    dtype: DataType,
+    col: &str,
+    path: &str,
+    features: Vec<&str>,
+    timestamp_values: ArrayRef,
+    expected_bounds: (&str, &str),
+) -> Result<(), Box<dyn std::error::Error>> {
+    // setup tracing
+    let _ = tracing_subscriber::fmt::try_init();
+
+    let schema = Arc::new(delta_kernel::schema::StructType::try_new(vec![
+        delta_kernel::schema::StructField::nullable(col, dtype),
+    ])?);
+
+    let (store, engine, table_location) = engine_store_setup(path, None);
+    let table_url = create_table(
+        store.clone(),
+        table_location,
+        schema.clone(),
+        &[],
+        true,
+        features.clone(),
+        features,
+    )
+    .await?;
+
+    let mut txn = test_utils::load_and_begin_transaction_with(
+        table_url.clone(),
+        &engine,
+        UpdateTableOperation::Write,
+        "default engine",
+        true,
+        |builder| builder,
+    )?;
+
     let data = RecordBatch::try_new(
         Arc::new(schema.as_ref().try_into_arrow()?),
-        vec![Arc::new(TimestampMicrosecondArray::from(timestamp_values))],
+        vec![timestamp_values],
     )?;
 
     // Write data
@@ -87,9 +183,9 @@ async fn test_append_timestamp_ntz() -> Result<(), Box<dyn std::error::Error>> {
 
     // Verify the commit was written correctly
     let commit1 = store
-        .get(&Path::from(
-            "/test_table_timestamp_ntz/_delta_log/00000000000000000001.json",
-        ))
+        .get(&Path::from(format!(
+            "/{path}/_delta_log/00000000000000000001.json"
+        )))
         .await?;
 
     let parsed_commits: Vec<_> = Deserializer::from_slice(&commit1.bytes().await?)
@@ -112,8 +208,9 @@ async fn test_append_timestamp_ntz() -> Result<(), Box<dyn std::error::Error>> {
 
     let stats: serde_json::Value =
         serde_json::from_str(parsed_commits[1]["add"]["stats"].as_str().unwrap())?;
-    assert_eq!(stats["minValues"]["ts_ntz"], "0001-01-01T00:00:00.000");
-    assert_eq!(stats["maxValues"]["ts_ntz"], "9999-12-31T23:59:59.999");
+    let (expected_min, expected_max) = expected_bounds;
+    assert_eq!(stats["minValues"][col], expected_min);
+    assert_eq!(stats["maxValues"][col], expected_max);
 
     // Verify the data can be read back correctly
     test_read(&ArrowEngineData::new(data), &table_url, engine)?;

@@ -628,6 +628,42 @@ fn visit_field_geography_impl(
         nullable,
         metadata,
     )
+#[cfg(feature = "nanosecond-timestamps")]
+/// Visit a timestamp_nanos field. Similar to timestamp but nanosecond resolution.
+///
+/// # Safety
+///
+/// Caller is responsible for providing a valid `state`, `name` slice with valid UTF-8 data,
+/// and `allocate_error` function pointer.
+#[no_mangle]
+pub unsafe extern "C" fn visit_field_timestamp_nanos(
+    state: &mut KernelSchemaVisitorState,
+    name: KernelStringSlice,
+    nullable: bool,
+    allocate_error: AllocateErrorFn,
+) -> ExternResult<usize> {
+    let name_str = unsafe { TryFromStringSlice::try_from_slice(&name) };
+    visit_field_primitive_impl(state, name_str, PrimitiveType::TimestampNanos, nullable)
+        .into_extern_result(&allocate_error)
+}
+
+#[cfg(feature = "nanosecond-timestamps")]
+/// Visit a timestamp_nanos_ntz field. Similar to timestamp_ntz but nanosecond resolution.
+///
+/// # Safety
+///
+/// Caller is responsible for providing a valid `state`, `name` slice with valid UTF-8 data,
+/// and `allocate_error` function pointer.
+#[no_mangle]
+pub unsafe extern "C" fn visit_field_timestamp_nanos_ntz(
+    state: &mut KernelSchemaVisitorState,
+    name: KernelStringSlice,
+    nullable: bool,
+    allocate_error: AllocateErrorFn,
+) -> ExternResult<usize> {
+    let name_str = unsafe { TryFromStringSlice::try_from_slice(&name) };
+    visit_field_primitive_impl(state, name_str, PrimitiveType::TimestampNanosNtz, nullable)
+        .into_extern_result(&allocate_error)
 }
 
 /// Visit a decimal field. Decimal fields store fixed-precision decimal numbers with specified
@@ -2087,6 +2123,8 @@ mod tests {
         //   col_interval_year_month: interval year to month,
         //   col_interval_day_time: interval day to second,
         //   col_void: void,
+        //   col_timestamp_nanos: timestamp_nanos,
+        //   col_timestamp_nanos_ntz: timestamp_nanos_ntz,
         //   col_decimal: decimal(10,2),
         //   col_array: array<string>,
         //   col_map: map<string, long>,
@@ -2127,6 +2165,12 @@ mod tests {
             null()
         );
         let col_void = visit_field!(void, state, "col_void", false, null());
+        #[cfg(feature = "nanosecond-timestamps")]
+        let col_timestamp_nanos =
+            visit_field!(timestamp_nanos, state, "col_timestamp_nanos", false, null());
+        #[cfg(feature = "nanosecond-timestamps")]
+        let col_timestamp_nanos_ntz =
+            visit_field!(timestamp_nanos_ntz, state, "col_timestamp_nanos_ntz", false, null());
         let col_decimal = visit_field!(decimal, state, "col_decimal", 10, 2, false, null());
 
         // Create array<string>
@@ -2205,6 +2249,10 @@ mod tests {
             col_geometry,
             #[cfg(feature = "geo-type-in-dev")]
             col_geography,
+            #[cfg(feature = "nanosecond-timestamps")]
+            col_timestamp_nanos,
+            #[cfg(feature = "nanosecond-timestamps")]
+            col_timestamp_nanos_ntz,
         ];
         let schema_id = ok_or_panic(unsafe {
             visit_field_struct(
@@ -2221,10 +2269,9 @@ mod tests {
         // Verify the schema
         let schema = extract_kernel_schema(&mut state, schema_id).unwrap();
         let fields: Vec<_> = schema.fields().collect();
-        #[cfg(feature = "geo-type-in-dev")]
-        let expected_len = 22;
-        #[cfg(not(feature = "geo-type-in-dev"))]
-        let expected_len = 20;
+        let expected_len = 20
+            + cfg!(feature = "geo-type-in-dev") as usize * 2
+            + cfg!(feature = "nanosecond-timestamps") as usize * 2;
         assert_eq!(fields.len(), expected_len);
 
         // Validate the primitive fields
@@ -2244,6 +2291,10 @@ mod tests {
             ("col_interval_year_month", PrimitiveType::IntervalYearMonth),
             ("col_interval_day_time", PrimitiveType::IntervalDayTime),
             ("col_void", PrimitiveType::Void),
+            #[cfg(feature = "nanosecond-timestamps")]
+            ("col_timestamp_nanos", PrimitiveType::TimestampNanos),
+            #[cfg(feature = "nanosecond-timestamps")]
+            ("col_timestamp_nanos_ntz", PrimitiveType::TimestampNanosNtz),
         ];
 
         for (index, (expected_name, expected_type)) in

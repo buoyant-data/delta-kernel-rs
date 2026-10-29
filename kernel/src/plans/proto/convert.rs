@@ -583,6 +583,10 @@ impl From<&Scalar> for proto_expr::Scalar {
             Scalar::TimestampNtz(v) => Value::TimestampNtz(*v),
             Scalar::IntervalYearMonth(v) => Value::IntervalYearMonth(*v),
             Scalar::IntervalDayTime(v) => Value::IntervalDayTime(*v),
+            #[cfg(feature = "nanosecond-timestamps")]
+            Scalar::TimestampNanos(v) => Value::TimestampNanos(*v),
+            #[cfg(feature = "nanosecond-timestamps")]
+            Scalar::TimestampNanosNtz(v) => Value::TimestampNanosNtz(*v),
             Scalar::Date(v) => Value::Date(*v),
             Scalar::Binary(v) => Value::Binary(v.clone()),
             Scalar::Decimal(decimal) => Value::Decimal(decimal.into()),
@@ -688,6 +692,14 @@ impl From<&PrimitiveType> for proto_schema::PrimitiveType {
             PrimitiveType::Date => PrimitiveTypeKind::Simple(Simple::Date as i32),
             PrimitiveType::Timestamp => PrimitiveTypeKind::Simple(Simple::Timestamp as i32),
             PrimitiveType::TimestampNtz => PrimitiveTypeKind::Simple(Simple::TimestampNtz as i32),
+            #[cfg(feature = "nanosecond-timestamps")]
+            PrimitiveType::TimestampNanos => {
+                PrimitiveTypeKind::Simple(Simple::TimestampNanos as i32)
+            }
+            #[cfg(feature = "nanosecond-timestamps")]
+            PrimitiveType::TimestampNanosNtz => {
+                PrimitiveTypeKind::Simple(Simple::TimestampNanosNtz as i32)
+            }
             PrimitiveType::Decimal(decimal) => PrimitiveTypeKind::Decimal((*decimal).into()),
             #[cfg(feature = "geo-type-in-dev")]
             PrimitiveType::Geometry(geometry) => {
@@ -2070,6 +2082,8 @@ mod tests {
             Value::TimestampNtz(_) => "timestamp_ntz",
             Value::IntervalYearMonth(_) => "interval_year_month",
             Value::IntervalDayTime(_) => "interval_day_time",
+            Value::TimestampNanos(_) => "timestamp_nanos",
+            Value::TimestampNanosNtz(_) => "timestamp_nanos_ntz",
             Value::Date(_) => "date",
             Value::Binary(_) => "binary",
             Value::Decimal(_) => "decimal",

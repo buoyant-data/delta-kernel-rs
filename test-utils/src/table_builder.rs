@@ -1868,16 +1868,16 @@ fn scalar_for_type(data_type: &DataType, seed: usize) -> Scalar {
                 // Intervals are physical integers: months (year-month) / microseconds (day-time).
                 PrimitiveType::IntervalYearMonth => Scalar::IntervalYearMonth((seed % 100) as i32),
                 PrimitiveType::IntervalDayTime => Scalar::IntervalDayTime((seed * 1000) as i64),
-            #[cfg(feature = "nanosecond-timestamps")]
-            PrimitiveType::TimestampNanos => {
-                // Nanoseconds since epoch (UTC)
-                Scalar::TimestampNanos((18000 + seed as i64) * 86_400_000_000_000)
-            }
-            #[cfg(feature = "nanosecond-timestamps")]
-            PrimitiveType::TimestampNanosNtz => {
-                // Nanoseconds since epoch (no timezone)
-                Scalar::TimestampNanosNtz((18000 + seed as i64) * 86_400_000_000_000)
-            }
+                #[cfg(feature = "nanosecond-timestamps")]
+                PrimitiveType::TimestampNanos => {
+                    // Nanoseconds since epoch (UTC)
+                    Scalar::TimestampNanos((18000 + seed as i64) * 86_400_000_000_000)
+                }
+                #[cfg(feature = "nanosecond-timestamps")]
+                PrimitiveType::TimestampNanosNtz => {
+                    // Nanoseconds since epoch (no timezone)
+                    Scalar::TimestampNanosNtz((18000 + seed as i64) * 86_400_000_000_000)
+                }
                 other => panic!("{other:?} is not a valid partition column type"),
             }
         }

@@ -628,23 +628,34 @@ fn visit_field_geography_impl(
         nullable,
         metadata,
     )
+}
+
 #[cfg(feature = "nanosecond-timestamps")]
 /// Visit a timestamp_nanos field. Similar to timestamp but nanosecond resolution.
 ///
 /// # Safety
 ///
 /// Caller is responsible for providing a valid `state`, `name` slice with valid UTF-8 data,
-/// and `allocate_error` function pointer.
+/// and `allocate_error` function pointer. When non-null, `metadata` must point to a valid
+/// descriptor and callback.
 #[no_mangle]
 pub unsafe extern "C" fn visit_field_timestamp_nanos(
     state: &mut KernelSchemaVisitorState,
     name: KernelStringSlice,
     nullable: bool,
+    metadata: *const EngineMetadata,
     allocate_error: AllocateErrorFn,
 ) -> ExternResult<usize> {
     let name_str = unsafe { TryFromStringSlice::try_from_slice(&name) };
-    visit_field_primitive_impl(state, name_str, PrimitiveType::TimestampNanos, nullable)
-        .into_extern_result(&allocate_error)
+    let metadata = visit_engine_metadata(unsafe { metadata.as_ref() });
+    visit_field_primitive_impl(
+        state,
+        name_str,
+        PrimitiveType::TimestampNanos,
+        nullable,
+        metadata,
+    )
+    .into_extern_result(&allocate_error)
 }
 
 #[cfg(feature = "nanosecond-timestamps")]
@@ -653,17 +664,26 @@ pub unsafe extern "C" fn visit_field_timestamp_nanos(
 /// # Safety
 ///
 /// Caller is responsible for providing a valid `state`, `name` slice with valid UTF-8 data,
-/// and `allocate_error` function pointer.
+/// and `allocate_error` function pointer. When non-null, `metadata` must point to a valid
+/// descriptor and callback.
 #[no_mangle]
 pub unsafe extern "C" fn visit_field_timestamp_nanos_ntz(
     state: &mut KernelSchemaVisitorState,
     name: KernelStringSlice,
     nullable: bool,
+    metadata: *const EngineMetadata,
     allocate_error: AllocateErrorFn,
 ) -> ExternResult<usize> {
     let name_str = unsafe { TryFromStringSlice::try_from_slice(&name) };
-    visit_field_primitive_impl(state, name_str, PrimitiveType::TimestampNanosNtz, nullable)
-        .into_extern_result(&allocate_error)
+    let metadata = visit_engine_metadata(unsafe { metadata.as_ref() });
+    visit_field_primitive_impl(
+        state,
+        name_str,
+        PrimitiveType::TimestampNanosNtz,
+        nullable,
+        metadata,
+    )
+    .into_extern_result(&allocate_error)
 }
 
 /// Visit a decimal field. Decimal fields store fixed-precision decimal numbers with specified
@@ -2123,15 +2143,15 @@ mod tests {
         //   col_interval_year_month: interval year to month,
         //   col_interval_day_time: interval day to second,
         //   col_void: void,
-        //   col_timestamp_nanos: timestamp_nanos,
-        //   col_timestamp_nanos_ntz: timestamp_nanos_ntz,
         //   col_decimal: decimal(10,2),
         //   col_array: array<string>,
         //   col_map: map<string, long>,
         //   col_struct: struct<inner: string>,
         //   col_variant: variant<metadata: binary, value: binary>
         //   col_geometry: geometry(OGC:CRS84),
-        //   col_geography: geography(OGC:CRS84, spherical)
+        //   col_geography: geography(OGC:CRS84, spherical),
+        //   col_timestamp_nanos: timestamp_nanos,
+        //   col_timestamp_nanos_ntz: timestamp_nanos_ntz
         // >
 
         let mut state = KernelSchemaVisitorState::default();
@@ -2169,8 +2189,13 @@ mod tests {
         let col_timestamp_nanos =
             visit_field!(timestamp_nanos, state, "col_timestamp_nanos", false, null());
         #[cfg(feature = "nanosecond-timestamps")]
-        let col_timestamp_nanos_ntz =
-            visit_field!(timestamp_nanos_ntz, state, "col_timestamp_nanos_ntz", false, null());
+        let col_timestamp_nanos_ntz = visit_field!(
+            timestamp_nanos_ntz,
+            state,
+            "col_timestamp_nanos_ntz",
+            false,
+            null()
+        );
         let col_decimal = visit_field!(decimal, state, "col_decimal", 10, 2, false, null());
 
         // Create array<string>
@@ -2291,10 +2316,6 @@ mod tests {
             ("col_interval_year_month", PrimitiveType::IntervalYearMonth),
             ("col_interval_day_time", PrimitiveType::IntervalDayTime),
             ("col_void", PrimitiveType::Void),
-            #[cfg(feature = "nanosecond-timestamps")]
-            ("col_timestamp_nanos", PrimitiveType::TimestampNanos),
-            #[cfg(feature = "nanosecond-timestamps")]
-            ("col_timestamp_nanos_ntz", PrimitiveType::TimestampNanosNtz),
         ];
 
         for (index, (expected_name, expected_type)) in
@@ -2360,6 +2381,23 @@ mod tests {
             };
             assert_eq!(geography_type.crs(), "OGC:CRS84");
             assert_eq!(geography_type.algorithm().to_string(), "spherical");
+        }
+
+        #[cfg(feature = "nanosecond-timestamps")]
+        {
+            let nanos_base = 20 + cfg!(feature = "geo-type-in-dev") as usize * 2;
+            assert_eq!(fields[nanos_base].name(), "col_timestamp_nanos");
+            assert_eq!(
+                fields[nanos_base].data_type(),
+                &DataType::Primitive(PrimitiveType::TimestampNanos)
+            );
+            assert!(!fields[nanos_base].is_nullable());
+            assert_eq!(fields[nanos_base + 1].name(), "col_timestamp_nanos_ntz");
+            assert_eq!(
+                fields[nanos_base + 1].data_type(),
+                &DataType::Primitive(PrimitiveType::TimestampNanosNtz)
+            );
+            assert!(!fields[nanos_base + 1].is_nullable());
         }
     }
 

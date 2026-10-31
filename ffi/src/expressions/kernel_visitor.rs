@@ -629,13 +629,13 @@ impl NullTypeTag {
             Self::Binary => Ok(DataType::BINARY),
             Self::Date => Ok(DataType::DATE),
             #[cfg(not(feature = "nanosecond-timestamps"))]
-            Self::TimestampNanos => Err(delta_kernel::Error::generic(
+            Self::TimestampNanos => Err(delta_kernel::KernelError::generic(
                 "`nanosecond-timestamps` Cargo feature not enabled",
             )),
             #[cfg(feature = "nanosecond-timestamps")]
             Self::TimestampNanos => Ok(DataType::TIMESTAMP_NANOS),
             #[cfg(not(feature = "nanosecond-timestamps"))]
-            Self::TimestampNanosNtz => Err(delta_kernel::Error::generic(
+            Self::TimestampNanosNtz => Err(delta_kernel::KernelError::generic(
                 "`nanosecond-timestamps` Cargo feature not enabled",
             )),
             #[cfg(feature = "nanosecond-timestamps")]
@@ -1115,7 +1115,7 @@ mod tests {
     }
 
     #[rstest]
-    #[case(15)]
+    #[case(17)]
     #[case(42)]
     #[case(254)]
     fn try_from_u8_invalid(#[case] value: u8) {
@@ -1141,7 +1141,7 @@ mod tests {
     #[test]
     fn visit_null_unrecognized_tag_returns_error() {
         let mut state = KernelExpressionVisitorState::default();
-        assert!(visit_expression_literal_null_impl(&mut state, 15, 0, 0).is_err());
+        assert!(visit_expression_literal_null_impl(&mut state, 17, 0, 0).is_err());
     }
 
     #[test]

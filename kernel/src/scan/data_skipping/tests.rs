@@ -445,10 +445,10 @@ fn test_timestamp_stats_enabled() {
 #[test]
 fn test_nanos_max_stat_adjustment_keeps_file_with_truncated_max() {
     // The stats writer stores a nanosecond max rounded down to milliseconds, so the actual max is
-    // in `[stored, stored + 999_999 ns]`. A predicate `max >= threshold` must keep the file whenever
-    // its actual max reaches the threshold, even though the stored bound sits below it. The
-    // adjustment widens the threshold by the gap, so the stored bound is compared against a value
-    // it can still reach.
+    // in `[stored, stored + 999_999 ns]`. A predicate `max >= threshold` must keep the file
+    // whenever its actual max reaches the threshold, even though the stored bound sits below
+    // it. The adjustment widens the threshold by the gap, so the stored bound is compared
+    // against a value it can still reach.
     let actual_max = 1_634_567_890_123_456_789i64; // sub-millisecond, so truncation applies
     let stored_max = actual_max - actual_max.rem_euclid(1_000_000);
     let threshold = actual_max; // predicate: max >= actual_max, which this file satisfies

@@ -31,33 +31,6 @@ use url::Url;
 
 #[tokio::test]
 async fn test_append_timestamp_ntz() -> Result<(), Box<dyn std::error::Error>> {
-    // setup tracing
-    let _ = tracing_subscriber::fmt::try_init();
-
-    // create a table with TIMESTAMP_NTZ column
-    let schema = schema_ref! { nullable "ts_ntz": TIMESTAMP_NTZ };
-
-    let (store, engine, table_location) = engine_store_setup("test_table_timestamp_ntz", None);
-    let table_url = create_table(
-        store.clone(),
-        table_location,
-        schema.clone(),
-        &[],
-        true,
-        vec!["timestampNtz"],
-        vec!["timestampNtz"],
-    )
-    .await?;
-
-    let mut txn = test_utils::load_and_begin_transaction_with(
-        table_url.clone(),
-        &engine,
-        UpdateTableOperation::Write,
-        "default engine",
-        true,
-        |builder| builder,
-    )?;
-
     // Create Arrow data with TIMESTAMP_NTZ values including edge cases
     // These are microseconds since Unix epoch
     let timestamp_values = vec![

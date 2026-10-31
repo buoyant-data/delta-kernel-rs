@@ -915,6 +915,16 @@ impl TryFrom<proto_schema::PrimitiveType> for PrimitiveType {
                     Simple::Date => PrimitiveType::Date,
                     Simple::Timestamp => PrimitiveType::Timestamp,
                     Simple::TimestampNtz => PrimitiveType::TimestampNtz,
+                    #[cfg(feature = "nanosecond-timestamps")]
+                    Simple::TimestampNanos => PrimitiveType::TimestampNanos,
+                    #[cfg(feature = "nanosecond-timestamps")]
+                    Simple::TimestampNanosNtz => PrimitiveType::TimestampNanosNtz,
+                    #[cfg(not(feature = "nanosecond-timestamps"))]
+                    Simple::TimestampNanos | Simple::TimestampNanosNtz => {
+                        return Err(KernelError::schema(
+                            "timestamp_nanos types require the 'nanosecond-timestamps' feature",
+                        ))
+                    }
                     Simple::Void => PrimitiveType::Void,
                     Simple::IntervalYearMonth => PrimitiveType::IntervalYearMonth,
                     Simple::IntervalDayTime => PrimitiveType::IntervalDayTime,

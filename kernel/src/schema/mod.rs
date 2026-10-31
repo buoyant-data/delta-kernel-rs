@@ -2194,10 +2194,6 @@ impl<'de> serde::Deserialize<'de> for PrimitiveType {
             "timestamp_nanos" => Ok(PrimitiveType::TimestampNanos),
             #[cfg(feature = "nanosecond-timestamps")]
             "timestamp_nanos_ntz" => Ok(PrimitiveType::TimestampNanosNtz),
-            #[cfg(feature = "nanosecond-timestamps")]
-            "timestamp_nanos" => Ok(PrimitiveType::TimestampNanos),
-            #[cfg(feature = "nanosecond-timestamps")]
-            "timestamp_nanos_ntz" => Ok(PrimitiveType::TimestampNanosNtz),
             "void" => Ok(PrimitiveType::Void),
             // Accept canonical and narrowed interval spellings
             s if s.starts_with("interval ") => {
@@ -2286,10 +2282,6 @@ impl Display for PrimitiveType {
             PrimitiveType::TimestampNanosNtz => write!(f, "timestamp_nanos_ntz"),
             PrimitiveType::IntervalYearMonth => write!(f, "interval year to month"),
             PrimitiveType::IntervalDayTime => write!(f, "interval day to second"),
-            #[cfg(feature = "nanosecond-timestamps")]
-            PrimitiveType::TimestampNanos => write!(f, "timestamp_nanos"),
-            #[cfg(feature = "nanosecond-timestamps")]
-            PrimitiveType::TimestampNanosNtz => write!(f, "timestamp_nanos_ntz"),
             PrimitiveType::Decimal(dtype) => {
                 write!(f, "decimal({},{})", dtype.precision(), dtype.scale())
             }

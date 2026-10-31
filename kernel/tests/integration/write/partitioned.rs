@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use chrono::{NaiveDate, NaiveDateTime, TimeZone, Utc};
 use buoyant_kernel as delta_kernel;
+use chrono::{NaiveDate, NaiveDateTime, TimeZone, Utc};
 use delta_kernel::actions::{MAX_VALUES, MIN_VALUES, NULL_COUNT};
 #[cfg(feature = "nanosecond-timestamps")]
 use delta_kernel::arrow::array::TimestampNanosecondArray;
@@ -531,7 +531,10 @@ fn all_types_schema() -> Arc<StructType> {
     #[cfg(feature = "nanosecond-timestamps")]
     let base = {
         let mut fields: Vec<StructField> = base.fields().cloned().collect();
-        fields.push(StructField::nullable("p_timestamp_nanos", DataType::TIMESTAMP_NANOS));
+        fields.push(StructField::nullable(
+            "p_timestamp_nanos",
+            DataType::TIMESTAMP_NANOS,
+        ));
         fields.push(StructField::nullable(
             "p_timestamp_nanos_ntz",
             DataType::TIMESTAMP_NANOS_NTZ,

@@ -383,6 +383,10 @@ impl MetricsReporter for FfiMetricsReporter {
             }
         };
         if let Some(callback) = callback {
+            // The wrapping closure is required: extern "C" fn pointers do not implement the
+            // `FnOnce` bound of `with_ffi_event` (clippy's redundant_closure suggestion does not
+            // apply to extern fn pointers).
+            #[allow(clippy::redundant_closure)]
             with_ffi_event(&event, |ffi_event| callback(ffi_event));
         }
     }

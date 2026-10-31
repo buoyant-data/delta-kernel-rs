@@ -624,6 +624,7 @@ fn collect_stats_raw(
 /// # use delta_kernel::arrow::datatypes::{DataType, Field, Int64Type, Schema};
 /// # use delta_kernel::expressions::column_name;
 /// # use delta_kernel::schema::{DataType as KernelDataType, StructField, StructType};
+/// # use buoyant_kernel_engine as delta_kernel_default_engine;
 /// # use delta_kernel_default_engine::stats::FileStatsAccumulator;
 /// # fn main() -> delta_kernel::KernelResult<()> {
 /// let schema = Arc::new(Schema::new(vec![Field::new("id", DataType::Int64, false)]));

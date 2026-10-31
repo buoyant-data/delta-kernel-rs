@@ -623,7 +623,7 @@ fn try_from_struct_data_impl(input: &DeriveInput) -> Result<TokenStream, Error> 
 ///
 /// ```
 /// mod first {
-///     use delta_kernel_derive::pub_macro;
+///     use buoyant_kernel_derive::pub_macro;
 ///
 ///     #[pub_macro]
 ///     macro_rules! identity {
@@ -632,7 +632,7 @@ fn try_from_struct_data_impl(input: &DeriveInput) -> Result<TokenStream, Error> 
 /// }
 ///
 /// mod second {
-///     use delta_kernel_derive::pub_macro;
+///     use buoyant_kernel_derive::pub_macro;
 ///
 ///     #[pub_macro]
 ///     macro_rules! identity {

@@ -353,7 +353,7 @@ mod tests {
             "with_checkpoint_no_last_checkpoint",
             StatsOptions::default(),
             &["part-00000-70b1dcdf-0236-4f63-a072-124cdbafd8a0-c000.snappy.parquet"], /* Add from commit 3 */
-            &[],                                                                      // No sidecars
+            &[], // No sidecars
         )
     }
 }

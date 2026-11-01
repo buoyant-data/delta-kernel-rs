@@ -204,6 +204,7 @@ pub(crate) enum TableFeature {
     /// Parquet Modular Encryption of data files, per the draft RFC delta-io/delta#6195. The
     /// `-dev` suffix marks the feature as experimental until the RFC is standardised. Gated by
     /// the `parquet-encryption-in-dev` cargo feature; see `PARQUET_ENCRYPTION_DEV_INFO`.
+    #[cfg(feature = "parquet-encryption-in-dev")]
     #[strum(serialize = "parquetEncryption-dev")]
     #[serde(rename = "parquetEncryption-dev")]
     ParquetEncryptionDev,
@@ -760,6 +761,7 @@ static GEOSPATIAL_TYPE_INFO: FeatureInfo = FeatureInfo {
 // (`DefaultEngine`) would commit plaintext files to an encrypted table. That check lives on the
 // transaction, like `ack_column_defaults`, so metadata-only commits, CREATE TABLE and
 // checkpoints are unaffected.
+#[cfg(feature = "parquet-encryption-in-dev")]
 static PARQUET_ENCRYPTION_DEV_INFO: FeatureInfo = FeatureInfo {
     feature_type: FeatureType::ReaderWriter,
     min_legacy_version: None,
@@ -884,6 +886,7 @@ impl TableFeature {
             TableFeature::VariantShreddingPreview => &VARIANT_SHREDDING_PREVIEW_INFO,
             TableFeature::AdaptiveMetadataPreview => &ADAPTIVE_METADATA_PREVIEW_INFO,
             TableFeature::GeospatialType => &GEOSPATIAL_TYPE_INFO,
+            #[cfg(feature = "parquet-encryption-in-dev")]
             TableFeature::ParquetEncryptionDev => &PARQUET_ENCRYPTION_DEV_INFO,
 
             // Unknown features: not supported by kernel, no legacy version inference.
@@ -1185,8 +1188,8 @@ mod tests {
         not(feature = "parquet-encryption-in-dev"),
         case::parquet_encryption_gated_off(
             Protocol::try_new_modern(
-                [TableFeature::ParquetEncryptionDev],
-                [TableFeature::ParquetEncryptionDev],
+                [TableFeature::Unknown("parquetEncryption-dev".to_string())],
+                [TableFeature::Unknown("parquetEncryption-dev".to_string())],
             )
             .unwrap(),
             ExpectRead::Unsupported
@@ -1280,6 +1283,7 @@ mod tests {
                 TableFeature::AdaptiveMetadataPreview => "adaptiveMetadata-preview",
                 TableFeature::AllowColumnDefaults => "allowColumnDefaults",
                 TableFeature::GeospatialType => "geospatial",
+                #[cfg(feature = "parquet-encryption-in-dev")]
                 TableFeature::ParquetEncryptionDev => "parquetEncryption-dev",
                 TableFeature::Unknown(_) => continue, // tested in test_unknown_features
             };
